@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}学生注册 - 生物统计学课程平台{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card register-card">
+        <div class="auth-header">
+            <h1 class="auth-title">学生注册</h1>
+            <p class="auth-subtitle">加入生物统计学课程平台</p>
+        </div>
+
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+            
+            <!-- 显示表单错误 -->
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <div class="form-sections-column">
+                <!-- 账户信息 -->
+                <div class="form-section">
+                    <h3 class="section-title">账户信息</h3>
+                    <div class="account-info-row">
+                        <div class="form-group">
+                            <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                            {{ form.username }}
+                            {% if form.username.errors %}
+                                <div class="field-error">{{ form.username.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="field-error">{{ form.email.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label for="{{ form.password1.id_for_label }}">{{ form.password1.label }}</label>
+                            {{ form.password1 }}
+                            {% if form.password1.errors %}
+                                <div class="field-error">{{ form.password1.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label for="{{ form.password2.id_for_label }}">{{ form.password2.label }}</label>
+                            {{ form.password2 }}
+                            {% if form.password2.errors %}
+                                <div class="field-error">{{ form.password2.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 基本信息 -->
+                <div class="form-section">
+                    <h3 class="section-title">基本信息</h3>
+                    <div class="basic-info-grid">
+                        <div class="form-group">
+                            <label for="{{ form.real_name.id_for_label }}">{{ form.real_name.label }}</label>
+                            {{ form.real_name }}
+                            {% if form.real_name.errors %}
+                                <div class="field-error">{{ form.real_name.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label for="{{ form.gender.id_for_label }}">{{ form.gender.label }}</label>
+                            {{ form.gender }}
+                            {% if form.gender.errors %}
+                                <div class="field-error">{{ form.gender.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label for="{{ form.student_id.id_for_label }}">{{ form.student_id.label }}</label>
+                            {{ form.student_id }}
+                            {% if form.student_id.errors %}
+                                <div class="field-error">{{ form.student_id.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label for="{{ form.grade.id_for_label }}">{{ form.grade.label }}</label>
+                            {{ form.grade }}
+                            {% if form.grade.errors %}
+                                <div class="field-error">{{ form.grade.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label for="{{ form.student_class.id_for_label }}">{{ form.student_class.label }}</label>
+                            {{ form.student_class }}
+                            {% if form.student_class.errors %}
+                                <div class="field-error">{{ form.student_class.errors }}</div>
+                            {% endif %}
+                            {% if form.student_class.help_text %}
+                                <small class="form-text text-muted">{{ form.student_class.help_text }}</small>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label for="{{ form.teaching_class.id_for_label }}">{{ form.teaching_class.label }}</label>
+                            {{ form.teaching_class }}
+                            {% if form.teaching_class.errors %}
+                                <div class="field-error">{{ form.teaching_class.errors }}</div>
+                            {% endif %}
+                            {% if form.teaching_class.help_text %}
+                                <small class="form-text text-muted">{{ form.teaching_class.help_text }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-large">注册</button>
+            </div>
+        </form>
+
+        <div class="auth-footer">
+            <p>已有账户？<a href="{% url 'core:login' %}" class="auth-link">立即登录</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

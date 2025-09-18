@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load chinese_name %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="post-detail-container">
+    <!-- 面包屑导航 -->
+    <nav class="breadcrumb" style="margin-bottom: 32px;">
+        <a href="{% url 'core:forum_index' %}">讨论区</a> > {{ category.name }}
+    </nav>
+
+    <!-- 分类头部 -->
+    <div class="category-header">
+        <div class="category-icon" style="font-size: 3rem; margin-bottom: 20px;">{{ category.icon }}</div>
+        <h1 class="category-title">{{ category.name }}</h1>
+        {% if category.description %}
+        <p class="category-description">{{ category.description }}</p>
+        {% endif %}
+    </div>
+
+    <!-- 分类帖子列表 -->
+    <div class="category-posts">
+        <div class="category-posts-header">
+            <h2 class="posts-title">讨论帖子</h2>
+            {% if user.is_authenticated %}
+            <a href="{% url 'core:forum_new_post' %}" class="btn btn-primary">
+                <span class="btn-icon">✏️</span>
+                发布新帖
+            </a>
+            {% endif %}
+        </div>
+
+        <div class="posts-list">
+            {% for post in posts %}
+            <div class="post-item">
+                <div class="post-type-badge post-type-{{ post.post_type }}">
+                    {% if post.post_type == 'question' %}❓
+                    {% elif post.post_type == 'announcement' %}📢
+                    {% else %}💬{% endif %}
+                </div>
+                <div class="post-content">
+                    <h3><a href="{% url 'core:forum_post_detail' post.id %}">
+                        {% if post.is_pinned %}📌 {% endif %}{{ post.title }}
+                    </a></h3>
+                    <div class="post-meta">
+                        <span class="post-author">{{ post.author|chinese_full_name }}</span>
+                        <span class="post-time">{{ post.created_at|date:"m月d日 H:i" }}</span>
+                        {% if post.last_reply_at %}
+                        <span class="last-reply">最后回复: {{ post.last_reply_at|date:"m月d日 H:i" }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="post-stats">
+                        <span>👁️ {{ post.view_count }}</span>
+                        <span>💬 {{ post.reply_count }}</span>
+                        {% if post.last_reply_by %}
+                        <span>最后回复: {{ post.last_reply_by|chinese_full_name }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="no-posts">
+                <p>该分类下暂无帖子</p>
+                {% if user.is_authenticated %}
+                <p><a href="{% url 'core:forum_new_post' %}" class="btn btn-primary" style="margin-top: 16px;">发布第一个帖子</a></p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

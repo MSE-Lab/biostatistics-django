@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+
+
+{% block content %}
+<!-- 教材详情页面 - Apple风格设计 -->
+<section class="textbook-hero">
+    <div class="textbook-container">
+        <!-- 上半部分：封面和基本信息 -->
+        <div class="textbook-top">
+            <!-- 封面区域 -->
+            <div class="textbook-cover">
+                <img src="{% static textbook.cover_image %}" alt="{{ textbook.title }}" class="cover-image">
+            </div>
+            
+            <!-- 基本信息 -->
+            <div class="textbook-info">
+                <h1 class="textbook-title">{{ textbook.title }}</h1>
+                
+                <div class="textbook-meta">
+                    <div class="meta-group">
+                        <div class="meta-item">
+                            <span class="meta-label">主编</span>
+                            <span class="meta-value">{{ textbook.chief_editor }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">编者</span>
+                            <span class="meta-value">{{ textbook.editors|join:"、" }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="meta-group">
+                        <div class="meta-item">
+                            <span class="meta-label">出版社</span>
+                            <span class="meta-value">{{ textbook.publisher }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">ISBN</span>
+                            <span class="meta-value">{{ textbook.isbn }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">出版时间</span>
+                            <span class="meta-value">{{ textbook.publication_date }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">页数</span>
+                            <span class="meta-value">{{ textbook.pages }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="textbook-actions">
+                    <a href="{{ textbook.dangdang_url }}" target="_blank" class="btn-secondary large">
+                        当当网购买
+                    </a>
+                    <a href="{{ textbook.taobao_url }}" target="_blank" class="btn-secondary large">
+                        淘宝购买
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 下半部分：教材介绍 -->
+        <div class="textbook-description">
+            <div class="description-text">
+                <p>"生物统计学"对于生物学专业的读者来说，常被归为不友好的一类课程。然而，现实是生物统计学在生物、生态、农林、医药、卫生等领域都有广泛的应用，尤其在各领域内的科学研究工作中有重要的支撑作用。因此，高校生物与医药等相关专业的生物统计学教学与教材建设理应得到重视和加强。</p>
+                
+                <p>本书写作的动力源自作者近年来在教学和科研工作中对统计学的学习感悟。针对包括生物学在内的非数学专业读者学习统计学的痛点，本书在内容上强调统计分析方法背后的数学原理。作者尽可能地提供了数学公式完整的推导过程，并附上必要的文字解释，填补文字和数学表达上的逻辑缺口，力求降低阅读和理解的难度。同时，结合应用的需要，本书介绍的每一个统计分析方法，都通过例题呈现了R软件的操作过程，旨在让读者了解统计分析方法流程的同时掌握方法背后的基本逻辑。...</p>
+                
+            </div>
+        </div>
+    </div>
+</section>
+
+
+{% endblock %}

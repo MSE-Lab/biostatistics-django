@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+
+
+{% block content %}
+<!-- 英雄区域 -->
+<section class="hero" id="hero-section">
+    <div class="hero-bg-slide active" style="background-image: url('{% static 'images/hero/bg1.svg' %}');"></div>
+    <div class="hero-bg-slide" style="background-image: url('{% static 'images/hero/bg2.svg' %}');"></div>
+    <div class="hero-bg-slide" style="background-image: url('{% static 'images/hero/bg3.svg' %}');"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+        <h1 class="hero-title">{{ title }}</h1>
+        <p class="hero-subtitle">{{ subtitle }}</p>
+        <p class="course-code">课程代码：{{ course_code }}</p>
+    </div>
+    <div class="carousel-indicators">
+        <button class="carousel-indicator active" data-slide="0"></button>
+        <button class="carousel-indicator" data-slide="1"></button>
+        <button class="carousel-indicator" data-slide="2"></button>
+    </div>
+</section>
+
+<!-- 功能特色 -->
+<section class="features">
+    <div class="features-container">
+        <h2 class="section-title">平台特色</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>互动课程</h3>
+                <p>结合理论与实践，通过可视化图表和实例深入理解统计概念</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📝</div>
+                <h3>智能作业</h3>
+                <p>自动批改系统，即时反馈，帮助学生快速掌握知识点</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💬</div>
+                <h3>学习社区</h3>
+                <p>师生互动问答，同学协作学习，构建活跃的学习氛围</p>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- 课程预览 -->
+<section class="course-preview">
+    <div class="preview-container">
+        <h2 class="section-title">课程章节</h2>
+        <div class="course-grid">
+            {% for course in courses_preview %}
+            <div class="course-card">
+                <div class="course-number">{{ course.id|stringformat:"02d" }}</div>
+                <h3>{{ course.title }}</h3>
+                <p>{{ course.description }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        <div style="text-align: center; margin-top: 32px;">
+            <a href="{% url 'core:courses' %}" class="btn-primary large">查看全部课程</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

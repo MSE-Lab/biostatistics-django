@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load chinese_name %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- 作业信息 -->
+    <div class="assignment-header mb-4">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h2 class="mb-2">{{ assignment.title }}</h2>
+                <div class="assignment-meta">
+                    <span class="badge badge-primary me-2">{{ assignment.teaching_class.name }}</span>
+                    <span class="text-muted">总分：{{ assignment.total_score }}分</span>
+                </div>
+            </div>
+            <div class="text-end">
+                <a href="{% url 'core:assignment_result' assignment.id %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> 返回提交列表
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 批改统计 -->
+    <div class="grading-stats mb-4">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="stat-card text-center">
+                    <div class="stat-number text-info">{{ submissions.count }}</div>
+                    <div class="stat-label">待批改作业</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card text-center">
+                    <div class="stat-number text-success">{{ graded_count }}</div>
+                    <div class="stat-label">已批改作业</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card text-center">
+                    <div class="stat-number text-primary">{{ assignment.questions.count }}</div>
+                    <div class="stat-label">题目数量</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 批改列表 -->
+    <div class="grading-list">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">待批改作业列表</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if submissions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>学生姓名</th>
+                                    <th>学号</th>
+                                    <th>提交时间</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for submission in submissions %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="student-avatar me-2">
+                                                {{ submission.student.real_name|first }}
+                                            </div>
+                                            <span>{{ submission.student.real_name }}</span>
+                                        </div>
+                                    </td>
+                                    <td>{{ submission.student.username }}</td>
+                                    <td>
+                                        <div>{{ submission.submit_time|date:"m-d H:i" }}</div>
+                                        {% if submission.is_late %}
+                                            <small class="text-danger">迟交</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if submission.is_graded %}
+                                            <span class="badge bg-success">已批改</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">待批改</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'core:assignment_grade_detail' assignment.id submission.id %}" 
+                                           class="btn btn-primary btn-sm">
+                                            <i class="fas fa-edit"></i> 
+                                            {% if submission.is_graded %}重新批改{% else %}开始批改{% endif %}
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-clipboard-check fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">暂无待批改作业</h5>
+                        <p class="text-muted">学生提交作业后将在此显示</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.assignment-header {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.assignment-meta .badge {
+    font-size: 0.8rem;
+}
+
+.grading-stats .stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid #e9ecef;
+}
+
+.grading-stats .stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.grading-stats .stat-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.student-avatar {
+    width: 32px;
+    height: 32px;
+    background: #007bff;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.grading-list .card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+</style>
+{% endblock %}

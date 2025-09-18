@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="forum-container">
+    <div class="forum-header">
+        <h1>{{ title }}</h1>
+        <nav class="breadcrumb">
+            <a href="{% url 'core:forum_index' %}">讨论区</a> > 发布新帖
+        </nav>
+    </div>
+
+    <div class="new-post-form">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="post_type">帖子类型</label>
+                <select name="post_type" id="post_type" class="form-control">
+                    <option value="discussion">讨论帖</option>
+                    <option value="question">问答帖</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="category">选择分类</label>
+                <select name="category" id="category" class="form-control" required>
+                    <option value="">请选择分类</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            {% if is_student %}
+            <div class="form-group">
+                <label for="visibility">可见性设置</label>
+                <select name="visibility" id="visibility" class="form-control">
+                    {% for value, label in visibility_choices %}
+                    <option value="{{ value }}" 
+                            {% if not has_teaching_class and value != 'public' %}disabled{% endif %}>
+                        {{ label }}
+                        {% if not has_teaching_class and value != 'public' %}
+                        （需要先加入教学班）
+                        {% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+                <small class="form-text text-muted">
+                    <strong>完全开放：</strong>所有注册用户都可以看到<br>
+                    <strong>教学班内可见：</strong>仅您的教学班同学和任课教师可以看到<br>
+                    <strong>私信给教师：</strong>仅您和任课教师可以看到
+                </small>
+            </div>
+            {% endif %}
+
+            <div class="form-group">
+                <label for="title">标题</label>
+                <input type="text" name="title" id="title" class="form-control" 
+                       placeholder="请输入帖子标题" maxlength="200" required>
+            </div>
+
+            <div class="form-group">
+                <label for="content">内容</label>
+                <textarea name="content" id="content" class="form-control" 
+                          rows="10" placeholder="请输入帖子内容" required></textarea>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">发布帖子</button>
+                <a href="{% url 'core:forum_index' %}" class="btn btn-secondary">取消</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

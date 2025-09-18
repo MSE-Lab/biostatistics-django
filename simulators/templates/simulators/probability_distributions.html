@@ -1,0 +1,161 @@
+{% extends 'simulators/base.html' %}
+{% load static %}
+
+{% block title %}概率分布可视化器{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>概率分布可视化器</h2>
+                <a href="{% url 'simulators:index' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>返回模拟器首页
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 控制面板 -->
+        <div class="col-lg-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">分布选择</h5>
+                </div>
+                <div class="card-body">
+                    <!-- 分布类型选择 -->
+                    <div class="mb-4">
+                        <h6>分布类型</h6>
+                        <select id="distributionType" class="form-select mb-3">
+                            <optgroup label="连续分布">
+                                <option value="normal">正态分布 (Normal)</option>
+                                <option value="uniform">均匀分布 (Uniform)</option>
+                                <option value="exponential">指数分布 (Exponential)</option>
+                            </optgroup>
+                            <optgroup label="离散分布">
+                                <option value="binomial">二项分布 (Binomial)</option>
+                                <option value="poisson">泊松分布 (Poisson)</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <!-- 分布参数 -->
+                    <div class="mb-4">
+                        <h6>参数设置</h6>
+                        <div id="parametersContainer">
+                            <!-- 参数控件将动态生成 -->
+                        </div>
+                    </div>
+
+                    <!-- 显示参数 -->
+                    <div class="mb-4">
+                        <h6>显示范围</h6>
+                        <div class="mb-3">
+                            <label for="xMin" class="form-label">X轴最小值</label>
+                            <input type="number" class="form-control form-control-sm" id="xMin" value="-5" step="0.5">
+                        </div>
+                        <div class="mb-3">
+                            <label for="xMax" class="form-label">X轴最大值</label>
+                            <input type="number" class="form-control form-control-sm" id="xMax" value="5" step="0.5">
+                        </div>
+                        <div class="mb-3">
+                            <label for="yMax" class="form-label">Y轴最大值</label>
+                            <input type="number" class="form-control form-control-sm" id="yMax" value="0.5" step="0.1">
+                        </div>
+                        <button id="resetRange" class="btn btn-outline-secondary btn-sm w-100">
+                            <i class="fas fa-undo me-1"></i>重置范围
+                        </button>
+                    </div>
+
+                    <!-- 显示选项 -->
+                    <div class="mb-4">
+                        <h6>显示选项</h6>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="showPDF" checked>
+                            <label class="form-check-label" for="showPDF">
+                                概率密度函数 (PDF)
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="showCDF">
+                            <label class="form-check-label" for="showCDF">
+                                累积分布函数 (CDF)
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="showMean" checked>
+                            <label class="form-check-label" for="showMean">
+                                均值线
+                            </label>
+                        </div>
+                    </div>
+
+
+
+                    <!-- 随机数生成 -->
+                    <div class="mb-4">
+                        <h6>随机数生成</h6>
+                        <div class="mb-2">
+                            <label for="sampleSize" class="form-label">样本量</label>
+                            <input type="number" class="form-control" id="sampleSize" value="100" min="10" max="10000">
+                        </div>
+                        <button id="generateSample" class="btn btn-outline-primary btn-sm w-100">
+                            <i class="fas fa-dice me-2"></i>生成随机样本
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 可视化主体 -->
+        <div class="col-lg-9">
+            <!-- 主图表 -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0" id="chartTitle">正态分布 - 概率密度函数</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="distributionChart" width="800" height="400"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 随机样本散点图 -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">随机样本散点图</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="sampleScatterChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 随机样本直方图 -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">随机样本直方图</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="sampleChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/probability_distributions_fixed_final.js' %}"></script>
+{% endblock %}

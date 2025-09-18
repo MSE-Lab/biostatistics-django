@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>最简测试</title>
+</head>
+<body>
+    <h1>高尔顿板模拟器 - 最简测试</h1>
+    <p>如果你能看到这个页面，说明Django路由工作正常。</p>
+    
+    <canvas id="canvas" width="400" height="300" style="border: 1px solid black;"></canvas>
+    <br>
+    <button onclick="startTest()">开始测试</button>
+    
+    <script>
+    function startTest() {
+        console.log('测试开始');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 清空画布
+        ctx.clearRect(0, 0, 400, 300);
+        
+        // 画一个简单的圆
+        ctx.fillStyle = 'red';
+        ctx.beginPath();
+        ctx.arc(200, 150, 20, 0, Math.PI * 2);
+        ctx.fill();
+        
+        alert('测试完成！如果你看到红色圆圈，说明Canvas工作正常。');
+    }
+    </script>
+</body>
+</html>

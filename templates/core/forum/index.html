@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load chinese_name %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="forum-container">
+    <div class="forum-header">
+        <h1>{{ title }}</h1>
+        <p class="forum-subtitle">与同学们一起讨论学习中的问题，分享经验和心得</p>
+        
+        {% if user.is_authenticated %}
+        <div class="forum-actions">
+            <a href="{% url 'core:forum_new_post' %}" class="btn btn-primary">
+                <span class="btn-icon">✏️</span>
+                发布新帖
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="forum-content">
+        <!-- 与我相关的帖子 -->
+        {% if user.is_authenticated and related_posts %}
+        <div class="related-posts">
+            <h2>
+                {% if user.user_type == 'student' %}
+                    有回复的帖子
+                {% else %}
+                    学生私信
+                {% endif %}
+            </h2>
+            <div class="posts-list">
+                {% for post in related_posts %}
+                <div class="post-item related-post">
+                    <div class="post-type-badge post-type-{{ post.post_type }}">
+                        {% if post.post_type == 'question' %}❓
+                        {% elif post.post_type == 'announcement' %}📢
+                        {% else %}💬{% endif %}
+                    </div>
+                    <div class="post-content">
+                        <h3><a href="{% url 'core:forum_post_detail' post.id %}">{{ post.title }}</a></h3>
+                        <div class="post-meta">
+                            {% if user.user_type == 'student' %}
+                                <span class="post-author">我的帖子</span>
+                                <span class="post-reply-info">{{ post.latest_teacher_reply.author|chinese_full_name }} 回复了</span>
+                                <span class="post-time">{{ post.latest_teacher_reply.created_at|date:"m月d日 H:i" }}</span>
+                            {% else %}
+                                <span class="post-author">{{ post.author|chinese_full_name }}</span>
+                                <span class="post-category">{{ post.category.name }}</span>
+                                {% if post.latest_reply %}
+                                    <span class="post-reply-status replied">已回复</span>
+                                    <span class="post-time">{{ post.latest_reply.created_at|date:"m月d日 H:i" }}</span>
+                                {% else %}
+                                    <span class="post-reply-status unreplied">待回复</span>
+                                    <span class="post-time">{{ post.created_at|date:"m月d日 H:i" }}</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <div class="post-stats">
+                            <span>👁️ {{ post.view_count }}</span>
+                            <span>💬 {{ post.reply_count }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 分类列表 -->
+        <div class="forum-categories">
+            <h2>讨论分类</h2>
+            <div class="categories-grid">
+                {% for category in categories %}
+                <div class="category-card">
+                    <div class="category-icon">{{ category.icon }}</div>
+                    <div class="category-info">
+                        <h3><a href="{% url 'core:forum_category' category.id %}">{{ category.name }}</a></h3>
+                        <p>{{ category.description }}</p>
+                        <div class="category-stats">
+                            <span>{{ category.forumpost_set.count }} 个帖子</span>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="no-categories">暂无讨论分类</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 最新帖子 -->
+        <div class="recent-posts">
+            <h2>最新讨论</h2>
+            <div class="posts-list">
+                {% for post in recent_posts %}
+                <div class="post-item">
+                    <div class="post-type-badge post-type-{{ post.post_type }}">
+                        {% if post.post_type == 'question' %}❓
+                        {% elif post.post_type == 'announcement' %}📢
+                        {% else %}💬{% endif %}
+                    </div>
+                    <div class="post-content">
+                        <h3><a href="{% url 'core:forum_post_detail' post.id %}">{{ post.title }}</a></h3>
+                        <div class="post-meta">
+                            <span class="post-author">{{ post.author|chinese_full_name }}</span>
+                            <span class="post-category">{{ post.category.name }}</span>
+                            <span class="post-time">{{ post.created_at|date:"m月d日 H:i" }}</span>
+                        </div>
+                        <div class="post-stats">
+                            <span>👁️ {{ post.view_count }}</span>
+                            <span>💬 {{ post.reply_count }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="no-posts">暂无讨论帖子</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* 与我相关的帖子样式 */
+.related-posts {
+    margin-bottom: 3rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 2rem;
+    border-left: 4px solid #007bff;
+}
+
+.related-posts h2 {
+    color: #007bff;
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.related-posts h2::before {
+    content: "🔔";
+    font-size: 1.2rem;
+}
+
+.related-post {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 1rem;
+}
+
+.related-post:last-child {
+    margin-bottom: 0;
+}
+
+.post-reply-info {
+    color: #28a745;
+    font-weight: 500;
+}
+
+.post-reply-status.unreplied {
+    background: #ffc107;
+    color: #856404;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.post-reply-status.replied {
+    background: #28a745;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .related-posts {
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .related-posts h2 {
+        font-size: 1.25rem;
+    }
+}
+</style>
+{% endblock %}

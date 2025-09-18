@@ -1,0 +1,356 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load chinese_name %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="class-management-container">
+    <!-- 页面标题 -->
+    <div class="page-header">
+        <h1 class="page-title">📚 教学班管理</h1>
+        <p class="page-subtitle">管理您创建的所有教学班</p>
+        <button class="btn btn-primary" onclick="showCreateClassModal()">
+            ➕ 创建新教学班
+        </button>
+    </div>
+
+    <!-- 统计信息卡片 -->
+    <div class="stats-cards">
+        <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-info">
+                <div class="stat-number">{{ classes.count }}</div>
+                <div class="stat-label">总教学班数</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🟢</div>
+            <div class="stat-info">
+                <div class="stat-number">{{ classes|length|add:"-1"|default:"0" }}</div>
+                <div class="stat-label">开课中</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🔄</div>
+            <div class="stat-info">
+                <div class="stat-number">0</div>
+                <div class="stat-label">进行中</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-info">
+                <div class="stat-number">0</div>
+                <div class="stat-label">已结课</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 教学班列表 -->
+    <div class="classes-table-container">
+        <div class="table-header">
+            <h2>教学班列表</h2>
+            <div class="table-actions">
+                <input type="text" placeholder="搜索教学班..." class="search-input" id="classSearch">
+                <select class="filter-select" id="statusFilter">
+                    <option value="">全部状态</option>
+                    <option value="open">开课</option>
+                    <option value="in_progress">进行中</option>
+                    <option value="finished">结课</option>
+                </select>
+            </div>
+        </div>
+
+        {% if classes %}
+        <div class="table-responsive">
+            <table class="classes-table">
+                <thead>
+                    <tr>
+                        <th>创建时间</th>
+                        <th>教学班编号</th>
+                        <th>上课时间</th>
+                        <th>结课时间</th>
+                        <th>上课地点</th>
+                        <th>选课人数</th>
+                        <th>注册人数</th>
+                        <th>教学状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for class in classes %}
+                    <tr class="class-row" data-status="{{ class.teaching_status }}">
+                        <td>{{ class.created_at|date:"Y-m-d H:i" }}</td>
+                        <td class="class-code">{{ class.name }}</td>
+                        <td>{{ class.class_time }}</td>
+                        <td>{{ class.end_date|date:"Y-m-d"|default:"未设置" }}</td>
+                        <td>{{ class.class_location }}</td>
+                        <td class="text-center">{{ class.max_students }}</td>
+                        <td class="text-center">
+                            <span class="registered-count">{{ class.registered_students_count }}</span>
+                            {% if class.is_full %}
+                            <span class="full-badge">已满</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="status-badge status-{{ class.teaching_status }}">
+                                {% if class.teaching_status == 'open' %}🟢 开课
+                                {% elif class.teaching_status == 'in_progress' %}🔄 进行中
+                                {% else %}✅ 结课{% endif %}
+                            </span>
+                        </td>
+                        <td class="actions">
+                            <div class="action-buttons">
+                                {% if class.teaching_status != 'finished' %}
+                                <select class="status-select" onchange="updateClassStatus({{ class.id }}, this.value)">
+                                    <option value="">更改状态</option>
+                                    {% if class.teaching_status == 'open' %}
+                                    <option value="in_progress">设为进行中</option>
+                                    <option value="finished">设为结课</option>
+                                    {% elif class.teaching_status == 'in_progress' %}
+                                    <option value="finished">设为结课</option>
+                                    {% endif %}
+                                </select>
+                                {% endif %}
+                                <button class="btn-icon" onclick="viewClassDetails({{ class.id }})" title="查看详情">
+                                    👁️
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">📚</div>
+            <h3>还没有创建教学班</h3>
+            <p>点击上方的"创建新教学班"按钮开始创建您的第一个教学班</p>
+            <button class="btn btn-primary" onclick="showCreateClassModal()">
+                创建教学班
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 创建教学班模态框 -->
+<div class="modal" id="createClassModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>创建新教学班</h2>
+            <button class="modal-close" onclick="hideCreateClassModal()">&times;</button>
+        </div>
+        <form id="createClassForm" onsubmit="createClass(event)">
+            {% csrf_token %}
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="className">教学班编号 *</label>
+                        <input type="text" id="className" name="name" class="form-control" 
+                               placeholder="例如：202420241YN301018000701" required>
+                        <small class="form-help">建议采用选课系统分配的编号</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="maxStudents">选课人数 *</label>
+                        <input type="number" id="maxStudents" name="max_students" class="form-control" 
+                               min="1" max="200" value="50" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="startDate">开课日期 *</label>
+                        <input type="date" id="startDate" name="start_date" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="endDate">结课日期 *</label>
+                        <input type="date" id="endDate" name="end_date" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="classTime">上课时间 *</label>
+                    <input type="text" id="classTime" name="class_time" class="form-control" 
+                           placeholder="例如：周二 1-2节, 周四 5-6节" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="classLocation">上课地点 *</label>
+                    <input type="text" id="classLocation" name="class_location" class="form-control" 
+                           placeholder="例如：力行楼2202教室" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">教学班描述</label>
+                    <textarea id="description" name="description" class="form-control" rows="3" 
+                              placeholder="可选：添加教学班的详细描述"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideCreateClassModal()">
+                    取消
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    创建教学班
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// 显示创建教学班模态框
+function showCreateClassModal() {
+    console.log('显示模态框'); // 调试信息
+    const modal = document.getElementById('createClassModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.style.opacity = '1';
+        modal.style.visibility = 'visible';
+        console.log('模态框已显示');
+        
+        // 设置默认开课日期为今天
+        const today = new Date().toISOString().split('T')[0];
+        const startDateInput = document.getElementById('startDate');
+        if (startDateInput) {
+            startDateInput.value = today;
+        }
+        
+        // 设置默认结课日期为3个月后
+        const endDate = new Date();
+        endDate.setMonth(endDate.getMonth() + 3);
+        const endDateInput = document.getElementById('endDate');
+        if (endDateInput) {
+            endDateInput.value = endDate.toISOString().split('T')[0];
+        }
+    } else {
+        console.error('找不到模态框元素');
+    }
+}
+
+// 隐藏创建教学班模态框
+function hideCreateClassModal() {
+    const modal = document.getElementById('createClassModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.style.opacity = '0';
+        modal.style.visibility = 'hidden';
+    }
+    const form = document.getElementById('createClassForm');
+    if (form) {
+        form.reset();
+    }
+}
+
+// 创建教学班
+function createClass(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = '创建中...';
+    
+    fetch('{% url "core:create_class" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ ' + data.message);
+            hideCreateClassModal();
+            location.reload(); // 刷新页面显示新创建的教学班
+        } else {
+            alert('❌ ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('❌ 创建失败，请稍后重试');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    });
+}
+
+// 更新教学班状态
+function updateClassStatus(classId, newStatus) {
+    if (!newStatus) return;
+    
+    if (!confirm('确定要更改教学班状态吗？')) {
+        // 重置选择框
+        event.target.value = '';
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('status', newStatus);
+    
+    fetch(`/class/${classId}/update-status/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ ' + data.message);
+            location.reload();
+        } else {
+            alert('❌ ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('❌ 更新失败，请稍后重试');
+    });
+}
+
+// 查看教学班详情
+function viewClassDetails(classId) {
+    // 这里可以实现查看详情的功能
+    alert('查看教学班详情功能待实现');
+}
+
+// 搜索功能
+document.getElementById('classSearch').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const rows = document.querySelectorAll('.class-row');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+});
+
+// 状态筛选
+document.getElementById('statusFilter').addEventListener('change', function() {
+    const selectedStatus = this.value;
+    const rows = document.querySelectorAll('.class-row');
+    
+    rows.forEach(row => {
+        const status = row.getAttribute('data-status');
+        row.style.display = (!selectedStatus || status === selectedStatus) ? '' : 'none';
+    });
+});
+
+// 点击模态框外部关闭
+document.getElementById('createClassModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        hideCreateClassModal();
+    }
+});
+</script>
+{% endblock %}

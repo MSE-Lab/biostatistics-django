@@ -1,0 +1,591 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load chinese_name %}
+
+{% block title %}作业结果 - {{ assignment.title }}{% endblock %}
+
+{% block content %}
+<div class="result-container">
+    <div class="result-header">
+        <h1>{{ assignment.title }}</h1>
+        <div class="result-info">
+            <div class="info-item">
+                <span class="info-label">所属章节：</span>
+                <span class="info-value">{% if assignment.chapter %}第{{ assignment.chapter }}章{% else %}综合练习{% endif %}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">总分：</span>
+                <span class="info-value">{{ assignment.total_score }}分</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">{% if submission.is_submitted %}提交{% else %}草稿保存时间{% endif %}：</span>
+                <span class="info-value">{{ submission.submit_time|date:"Y年m月d日 H:i" }}</span>
+            </div>
+            {% if submission.is_late %}
+            <div class="info-item">
+                <span class="late-badge">逾期提交</span>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if submission.is_graded %}
+        <div class="score-summary">
+            <div class="score-circle">
+                <div class="score-value">{{ submission.score|floatformat:1 }}</div>
+                <div class="score-total">/ {{ assignment.total_score }}</div>
+            </div>
+            <div class="score-info">
+                <div class="score-percentage">
+                    {% if percentage is not None %}
+                        {{ percentage }}%
+                    {% else %}
+                        未评分
+                    {% endif %}
+                </div>
+                <div class="score-status">
+                    {% if percentage is not None %}
+                        {% if percentage >= 90 %}
+                            <span class="grade excellent">优秀</span>
+                        {% elif percentage >= 80 %}
+                            <span class="grade good">良好</span>
+                        {% elif percentage >= 70 %}
+                            <span class="grade average">中等</span>
+                        {% elif percentage >= 60 %}
+                            <span class="grade pass">及格</span>
+                        {% else %}
+                            <span class="grade fail">不及格</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="grade pending">待评分</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+            {% if not submission.is_submitted %}
+            <div class="draft-status">
+                <div class="draft-icon">📝</div>
+                <div class="draft-text">
+                    <h3>草稿状态</h3>
+                    <p>这是您保存的草稿，尚未正式提交。您可以继续编辑并提交作业。</p>
+                </div>
+            </div>
+            {% else %}
+            <div class="pending-grade">
+                <div class="pending-icon">⏳</div>
+                <div class="pending-text">
+                    <h3>等待批改</h3>
+                    <p>您的作业已提交成功，请耐心等待教师批改</p>
+                </div>
+            </div>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    <!-- 题目和答案详情 -->
+    <div class="questions-section">
+        <h2>答题详情</h2>
+        
+        {% for item in questions_with_answers %}
+        <div class="question-result-item">
+            <div class="question-header">
+                <span class="question-number">第{{ forloop.counter }}题</span>
+                <span class="question-type">
+                    {{ item.question.question_type|chinese_name }}
+                </span>
+                <span class="question-score">{{ item.question.score }}分</span>
+                {% if submission.is_graded and item.question_score is not None %}
+                <span class="earned-score">得分: {{ item.question_score|floatformat:1 }}</span>
+                {% endif %}
+            </div>
+            
+            <div class="question-content">
+                <p>{{ item.question.content|linebreaks }}</p>
+            </div>
+            
+            <!-- 选择题选项显示 -->
+            {% if item.question.question_type == 'single_choice' or item.question.question_type == 'multiple_choice' %}
+            <div class="options-display">
+                {% for option_key, option_value in item.question.options.items %}
+                <div class="option-item {% if item.question.question_type == 'single_choice' and item.student_answer == option_key %}selected{% elif item.question.question_type == 'multiple_choice' and option_key in item.student_answer %}selected{% endif %}">
+                    <span class="option-label">{{ option_key }}.</span>
+                    <span class="option-text">{{ option_value }}</span>
+                    {% if item.question.question_type == 'single_choice' and item.student_answer == option_key %}
+                        <span class="selection-mark">✓ 您的选择</span>
+                    {% elif item.question.question_type == 'multiple_choice' and option_key in item.student_answer %}
+                        <span class="selection-mark">✓ 您的选择</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- 填空题和简答题答案显示 -->
+            {% if item.question.question_type == 'fill_blank' or item.question.question_type == 'short_answer' %}
+            <div class="text-answer-display">
+                <div class="answer-label">您的答案：</div>
+                <div class="answer-content">
+                    {% if item.student_answer %}
+                        {{ item.student_answer|linebreaks }}
+                    {% else %}
+                        <span class="no-answer">未作答</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- 教师评语（如果已批改） -->
+            {% if submission.is_graded and item.teacher_comment %}
+            <div class="teacher-comment">
+                <div class="comment-label">教师评语：</div>
+                <div class="comment-content">{{ item.teacher_comment|linebreaks }}</div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- 教师总评（如果已批改） -->
+    {% if submission.is_graded and submission.teacher_comments %}
+    <div class="overall-comment">
+        <h3>教师总评</h3>
+        <div class="comment-content">{{ submission.teacher_comments|linebreaks }}</div>
+        <div class="comment-meta">
+            <span>批改教师：{{ submission.graded_by.real_name }}</span>
+            <span>批改时间：{{ submission.graded_at|date:"Y年m月d日 H:i" }}</span>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- 操作按钮 -->
+    <div class="result-actions">
+        <a href="{% url 'core:assignment_index' %}" class="btn btn-primary">返回作业列表</a>
+        {% if not submission.is_submitted %}
+        <a href="{% url 'core:assignment_take' assignment.id %}" class="btn btn-warning">继续编辑</a>
+        {% elif not submission.is_graded %}
+        <button onclick="window.location.reload()" class="btn btn-secondary">刷新状态</button>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.result-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.result-header {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.result-header h1 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-size: 2rem;
+}
+
+.result-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.info-label {
+    color: #7f8c8d;
+    font-weight: 500;
+}
+
+.info-value {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.late-badge {
+    background: #e74c3c;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.score-summary {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    color: white;
+}
+
+.score-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid rgba(255,255,255,0.3);
+}
+
+.score-value {
+    font-size: 2.5rem;
+    font-weight: bold;
+}
+
+.score-total {
+    font-size: 1rem;
+    opacity: 0.8;
+}
+
+.score-info {
+    flex: 1;
+}
+
+.score-percentage {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.grade {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.grade.excellent {
+    background: #27ae60;
+}
+
+.grade.good {
+    background: #3498db;
+}
+
+.grade.average {
+    background: #f39c12;
+}
+
+.grade.pass {
+    background: #95a5a6;
+}
+
+.grade.fail {
+    background: #e74c3c;
+}
+
+.pending-grade {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 12px;
+}
+
+.pending-icon {
+    font-size: 3rem;
+}
+
+.pending-text h3 {
+    color: #856404;
+    margin-bottom: 5px;
+}
+
+.pending-text p {
+    color: #856404;
+    margin: 0;
+}
+
+.draft-status {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 12px;
+}
+
+.draft-icon {
+    font-size: 3rem;
+}
+
+.draft-text h3 {
+    color: #856404;
+    margin-bottom: 5px;
+}
+
+.draft-text p {
+    color: #856404;
+    margin: 0;
+}
+
+.questions-section {
+    margin-bottom: 30px;
+}
+
+.questions-section h2 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+}
+
+.question-result-item {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.question-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #ecf0f1;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.question-number {
+    background: #3498db;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+.question-type {
+    background: #95a5a6;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.question-score {
+    background: #27ae60;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.earned-score {
+    background: #f39c12;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.question-content {
+    margin-bottom: 20px;
+}
+
+.question-content p {
+    color: #2c3e50;
+    line-height: 1.6;
+    font-size: 1.1rem;
+}
+
+.options-display {
+    margin-bottom: 20px;
+}
+
+.option-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    position: relative;
+}
+
+.option-item.selected {
+    background: #e8f4fd;
+    border: 2px solid #3498db;
+}
+
+.option-label {
+    font-weight: 600;
+    color: #3498db;
+    margin-right: 10px;
+    min-width: 25px;
+}
+
+.option-text {
+    color: #2c3e50;
+    flex: 1;
+}
+
+.selection-mark {
+    color: #27ae60;
+    font-weight: 600;
+    margin-left: 10px;
+}
+
+.text-answer-display {
+    margin-bottom: 20px;
+}
+
+.answer-label {
+    color: #7f8c8d;
+    font-weight: 500;
+    margin-bottom: 10px;
+}
+
+.answer-content {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #3498db;
+}
+
+.no-answer {
+    color: #95a5a6;
+    font-style: italic;
+}
+
+.teacher-comment {
+    background: #e8f5e8;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #27ae60;
+}
+
+.comment-label {
+    color: #27ae60;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.comment-content {
+    color: #2c3e50;
+    line-height: 1.5;
+}
+
+.overall-comment {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border-left: 4px solid #8e44ad;
+}
+
+.overall-comment h3 {
+    color: #8e44ad;
+    margin-bottom: 15px;
+}
+
+.comment-meta {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #ecf0f1;
+    display: flex;
+    justify-content: space-between;
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+.result-actions {
+    text-align: center;
+    padding: 20px;
+}
+
+.btn {
+    display: inline-block;
+    padding: 12px 24px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    text-align: center;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+    margin: 0 10px;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2980b9;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+.btn-warning {
+    background: #f39c12;
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #e67e22;
+}
+
+@media (max-width: 768px) {
+    .result-container {
+        padding: 10px;
+    }
+    
+    .result-header {
+        padding: 20px;
+    }
+    
+    .result-info {
+        grid-template-columns: 1fr;
+    }
+    
+    .score-summary {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .question-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .comment-meta {
+        flex-direction: column;
+        gap: 5px;
+    }
+}
+</style>
+{% endblock %}

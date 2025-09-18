@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load chinese_name %}
+
+{% block title %}课组 - 生物统计学课程平台{% endblock %}
+
+{% block content %}
+<!-- 页面标题 -->
+<section class="page-header">
+    <div class="container">
+        <h1 class="page-title">教师团队</h1>
+        <p class="page-subtitle">云南大学生命科学学院生物统计学教学团队</p>
+    </div>
+</section>
+
+<div class="about-container">
+    <!-- 教师团队 -->
+    <div class="teachers-section">
+        <div class="teachers-grid">
+            {% for teacher in teachers %}
+            <div class="teacher-card">
+                <div class="teacher-header">
+                    <div class="teacher-avatar">
+                        {% if teacher.photo %}
+                            <img src="{{ teacher.photo.url }}" alt="{{ teacher.user|chinese_full_name }}">
+                        {% else %}
+                            <div class="avatar-placeholder">
+                                {{ teacher.user|chinese_name_initial }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="teacher-basic-info">
+                        <h3 class="teacher-name">{{ teacher.user|chinese_full_name }}</h3>
+                        <div class="teacher-title">{{ teacher.get_title_display }}</div>
+                        {% if teacher.degree %}
+                        <div class="teacher-degree">{{ teacher.get_degree_display }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="teacher-details">
+                    <div class="detail-item">
+                        <div class="detail-label">所属学院</div>
+                        <div class="detail-value">云南大学生命科学学院</div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-label">专业领域</div>
+                        <div class="detail-value">{{ teacher.major }}</div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-label">研究方向</div>
+                        <div class="detail-value research-direction">{{ teacher.research_direction }}</div>
+                    </div>
+                    
+                    {% if teacher.bio %}
+                    <div class="detail-item">
+                        <div class="detail-label">个人简介</div>
+                        <div class="detail-value bio-text">{{ teacher.bio }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M23 21V19C23 18.1645 22.7155 17.3541 22.2094 16.7007C21.7033 16.0473 20.9999 15.5902 20.2 15.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 3.13C16.8003 3.35031 17.5037 3.80771 18.0098 4.46111C18.5159 5.11451 18.8004 5.92484 18.8004 6.76C18.8004 7.59516 18.5159 8.40549 18.0098 9.05889C17.5037 9.71229 16.8003 10.1697 16 10.39" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <h3>暂无教师信息</h3>
+                <p>教师信息将由管理员在后台添加，敬请期待。</p>
+                {% if user.is_staff %}
+                <a href="/admin/core/teacherprofile/" class="btn-primary">添加教师信息</a>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

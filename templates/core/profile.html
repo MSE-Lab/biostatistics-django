@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load chinese_name %}
+
+{% block title %}个人资料 - 生物统计学课程平台{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="profile-header">
+        <h1 class="page-title">个人资料</h1>
+        <p class="page-subtitle">管理您的账户信息</p>
+    </div>
+
+    <div class="profile-content">
+        <div class="profile-card">
+            <div class="profile-avatar">
+                {% if user.user_type == 'teacher' and user.teacherprofile.photo %}
+                    <img src="{{ user.teacherprofile.photo.url }}" alt="{{ user|chinese_full_name }}">
+                {% else %}
+                    <img src="{% static 'images/default-avatar.svg' %}" alt="{{ user|chinese_full_name }}">
+                {% endif %}
+            </div>
+            
+            <div class="profile-info">
+                <h2 class="profile-name">{{ user|chinese_full_name }}</h2>
+                <p class="profile-type">{{ user.get_user_type_display }}</p>
+                <p class="profile-username">用户名: {{ user.username }}</p>
+                <p class="profile-email">邮箱: {{ user.email }}</p>
+                <p class="profile-joined">注册时间: {{ user.date_joined|date:"Y年m月d日" }}</p>
+            </div>
+        </div>
+
+        {% if user.user_type == 'student' %}
+            <div class="student-info-card">
+                <h3 class="card-title">学生信息</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">性别:</span>
+                        <span class="info-value">{{ user.studentprofile.get_gender_display }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">学号:</span>
+                        <span class="info-value">{{ user.studentprofile.student_id }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">班级:</span>
+                        <span class="info-value">{{ user.studentprofile.class_info.name }}</span>
+                    </div>
+                </div>
+            </div>
+        {% elif user.user_type == 'teacher' %}
+            <div class="teacher-info-card">
+                <h3 class="card-title">教师信息</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">职称:</span>
+                        <span class="info-value">{{ user.teacherprofile.get_title_display }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">学位:</span>
+                        <span class="info-value">{{ user.teacherprofile.get_degree_display }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">专业:</span>
+                        <span class="info-value">{{ user.teacherprofile.major }}</span>
+                    </div>
+                    <div class="info-item full-width">
+                        <span class="info-label">研究方向:</span>
+                        <span class="info-value">{{ user.teacherprofile.research_direction }}</span>
+                    </div>
+                    {% if user.teacherprofile.bio %}
+                    <div class="info-item full-width">
+                        <span class="info-label">个人简介:</span>
+                        <span class="info-value">{{ user.teacherprofile.bio }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="profile-actions">
+            {% if user.is_staff %}
+                <a href="/admin/" class="btn btn-primary">管理后台</a>
+            {% endif %}
+            <a href="{% url 'core:logout' %}" class="btn btn-secondary">退出登录</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.profile-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 80px 20px;
+}
+
+.profile-header {
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+.profile-card {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.profile-avatar img {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid #f0f0f0;
+    margin-bottom: 20px;
+}
+
+.profile-name {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 10px;
+}
+
+.profile-type {
+    font-size: 1.1rem;
+    color: #0066cc;
+    font-weight: 500;
+    margin-bottom: 20px;
+}
+
+.profile-username,
+.profile-email,
+.profile-joined {
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.student-info-card,
+.teacher-info-card {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+.card-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.info-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.info-item.full-width {
+    grid-column: 1 / -1;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.info-label {
+    font-weight: 600;
+    color: #333;
+    min-width: 80px;
+}
+
+.info-value {
+    color: #666;
+    line-height: 1.6;
+}
+
+.profile-actions {
+    text-align: center;
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    .profile-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

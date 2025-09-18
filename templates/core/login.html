@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}用户登录 - 生物统计学课程平台{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h1 class="auth-title">用户登录</h1>
+            <p class="auth-subtitle">欢迎回到生物统计学课程平台</p>
+        </div>
+
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+            
+            <!-- 显示表单错误 -->
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <div class="form-group">
+                <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                    <div class="field-error">{{ form.username.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                {{ form.password }}
+                {% if form.password.errors %}
+                    <div class="field-error">{{ form.password.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-large">登录</button>
+            </div>
+        </form>
+
+        <div class="auth-footer">
+            <p>还没有账户？<a href="{% url 'core:register' %}" class="auth-link">学生注册</a></p>
+            <p class="admin-note">管理员和教师账户请联系系统管理员</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

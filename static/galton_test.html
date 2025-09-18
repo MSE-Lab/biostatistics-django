@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高尔顿板直接测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        canvas {
+            border: 2px solid #333;
+            background: #f8f9fa;
+            display: block;
+            margin: 20px auto;
+        }
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn-start {
+            background: #28a745;
+            color: white;
+        }
+        .btn-reset {
+            background: #dc3545;
+            color: white;
+        }
+        .stats {
+            text-align: center;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>高尔顿板模拟器 - 直接测试</h1>
+        <p>这是一个完全独立的HTML文件，用于测试高尔顿板功能。</p>
+        
+        <canvas id="galtonCanvas" width="600" height="400"></canvas>
+        
+        <div class="controls">
+            <button class="btn-start" onclick="startSimulation()">开始模拟</button>
+            <button class="btn-reset" onclick="resetSimulation()">重置</button>
+        </div>
+        
+        <div class="stats">
+            <p>状态: <span id="status">就绪</span></p>
+            <p>小球数量: <span id="ballCount">0</span></p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('galtonCanvas');
+        const ctx = canvas.getContext('2d');
+        const statusEl = document.getElementById('status');
+        const ballCountEl = document.getElementById('ballCount');
+        
+        let balls = [];
+        let pegs = [];
+        let bins = [];
+        let isRunning = false;
+        let animationId = null;
+        
+        // 初始化钉子
+        function initPegs() {
+            pegs = [];
+            const layers = 8;
+            const startX = canvas.width / 2;
+            const startY = 80;
+            
+            for (let layer = 0; layer < layers; layer++) {
+                const pegsInLayer = layer + 1;
+                const spacing = 50;
+                const layerY = startY + layer * 40;
+                
+                for (let peg = 0; peg < pegsInLayer; peg++) {
+                    const pegX = startX - (pegsInLayer - 1) * spacing / 2 + peg * spacing;
+                    pegs.push({ x: pegX, y: layerY });
+                }
+            }
+        }
+        
+        // 初始化收集槽
+        function initBins() {
+            bins = [];
+            const binCount = 9;
+            const binWidth = 50;
+            const startX = canvas.width / 2 - (binCount * binWidth) / 2;
+            const startY = canvas.height - 60;
+            
+            for (let i = 0; i < binCount; i++) {
+                bins.push({
+                    x: startX + i * binWidth,
+                    y: startY,
+                    width: binWidth,
+                    height: 50,
+                    count: 0
+                });
+            }
+        }
+        
+        // 绘制函数
+        function draw() {
+            // 清空画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制钉子
+            ctx.fillStyle = '#666';
+            pegs.forEach(peg => {
+                ctx.beginPath();
+                ctx.arc(peg.x, peg.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // 绘制收集槽
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            bins.forEach(bin => {
+                ctx.strokeRect(bin.x, bin.y, bin.width, bin.height);
+                
+                // 显示计数
+                if (bin.count > 0) {
+                    ctx.fillStyle = '#007bff';
+                    const barHeight = Math.min(bin.count * 3, bin.height - 5);
+                    ctx.fillRect(bin.x + 2, bin.y + bin.height - barHeight - 2, bin.width - 4, barHeight);
+                }
+                
+                // 显示数字
+                ctx.fillStyle = '#000';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(bin.count.toString(), bin.x + bin.width/2, bin.y + bin.height + 15);
+            });
+            
+            // 绘制小球
+            ctx.fillStyle = '#ff4444';
+            balls.forEach(ball => {
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // 更新统计
+            ballCountEl.textContent = balls.length;
+        }
+        
+        // 动画循环
+        function animate() {
+            if (!isRunning) return;
+            
+            // 添加新球
+            if (Math.random() < 0.1 && balls.length < 50) {
+                balls.push({
+                    x: canvas.width / 2 + (Math.random() - 0.5) * 20,
+                    y: 20,
+                    vx: 0,
+                    vy: 1
+                });
+            }
+            
+            // 更新球的位置
+            balls.forEach((ball, index) => {
+                ball.vy += 0.2; // 重力
+                ball.x += ball.vx;
+                ball.y += ball.vy;
+                
+                // 钉子碰撞
+                pegs.forEach(peg => {
+                    const dx = ball.x - peg.x;
+                    const dy = ball.y - peg.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 8) {
+                        ball.vx = (Math.random() - 0.5) * 3;
+                        ball.vy = Math.abs(ball.vy) * 0.8;
+                    }
+                });
+                
+                // 收集槽检测
+                bins.forEach(bin => {
+                    if (ball.x >= bin.x && ball.x <= bin.x + bin.width && 
+                        ball.y >= bin.y && ball.y <= bin.y + bin.height) {
+                        bin.count++;
+                        balls.splice(index, 1);
+                    }
+                });
+                
+                // 边界清理
+                if (ball.y > canvas.height) {
+                    balls.splice(index, 1);
+                }
+            });
+            
+            draw();
+            animationId = requestAnimationFrame(animate);
+        }
+        
+        // 开始模拟
+        function startSimulation() {
+            if (isRunning) return;
+            
+            isRunning = true;
+            statusEl.textContent = '运行中';
+            animate();
+        }
+        
+        // 重置模拟
+        function resetSimulation() {
+            isRunning = false;
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            
+            balls = [];
+            bins.forEach(bin => bin.count = 0);
+            statusEl.textContent = '已重置';
+            draw();
+        }
+        
+        // 初始化
+        function init() {
+            initPegs();
+            initBins();
+            draw();
+            statusEl.textContent = '就绪';
+        }
+        
+        // 页面加载完成后初始化
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

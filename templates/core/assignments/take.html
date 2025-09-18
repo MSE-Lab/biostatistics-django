@@ -1,0 +1,639 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load chinese_name %}
+
+{% block title %}{{ assignment.title }} - 答题{% endblock %}
+
+{% block content %}
+<div class="assignment-take-container">
+    <div class="assignment-header">
+        <h1>{{ assignment.title }}</h1>
+        <div class="assignment-info">
+            <div class="info-item">
+                <span class="info-label">所属章节：</span>
+                <span class="info-value">{% if assignment.chapter %}第{{ assignment.chapter }}章{% else %}综合练习{% endif %}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">总分：</span>
+                <span class="info-value">{{ assignment.total_score }}分</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">题目数量：</span>
+                <span class="info-value">{{ assignment.questions.count }}道</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">截止时间：</span>
+                <span class="info-value {% if assignment.is_due %}overdue{% endif %}">
+                    {{ assignment.due_time|date:"Y年m月d日 H:i" }}
+                </span>
+            </div>
+        </div>
+        
+        {% if assignment.description %}
+        <div class="assignment-description">
+            <h3>作业说明：</h3>
+            <p>{{ assignment.description|linebreaks }}</p>
+        </div>
+        {% endif %}
+        
+        <div class="time-warning">
+            <div class="timer" id="timer">
+                <span class="timer-label">剩余时间：</span>
+                <span class="timer-value" id="timer-value">计算中...</span>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" class="assignment-form" id="assignmentForm">
+        {% csrf_token %}
+        
+        <div class="questions-container">
+            {% for question in assignment.questions.all %}
+            <div class="question-item" id="question-{{ question.id }}">
+                <div class="question-header">
+                    <span class="question-number">第{{ forloop.counter }}题</span>
+                    <span class="question-type">
+                        {{ question.question_type|chinese_name }}
+                    </span>
+                    <span class="question-score">{{ question.score }}分</span>
+                </div>
+                
+                <div class="question-content">
+                    <p>{{ question.content|linebreaks }}</p>
+                </div>
+                
+                <div class="question-answer">
+                    {% if question.question_type == 'single_choice' %}
+                        {% for option_key, option_value in question.options.items %}
+                        <div class="option-item">
+                            <input type="radio" 
+                                   id="q{{ question.id }}_{{ option_key }}" 
+                                   name="answer_{{ question.id }}" 
+                                   value="{{ option_key }}"
+                                   {% if saved_answers and saved_answers|get_item:question.id == option_key %}checked{% endif %}>
+                            <label for="q{{ question.id }}_{{ option_key }}">
+                                <span class="option-label">{{ option_key }}.</span>
+                                <span class="option-text">{{ option_value }}</span>
+                            </label>
+                        </div>
+                        {% endfor %}
+                    
+                    {% elif question.question_type == 'multiple_choice' %}
+                        {% for option_key, option_value in question.options.items %}
+                        {% with saved_answer=saved_answers|get_item:question.id %}
+                        <div class="option-item">
+                            <input type="checkbox" 
+                                   id="q{{ question.id }}_{{ option_key }}" 
+                                   name="answer_{{ question.id }}" 
+                                   value="{{ option_key }}"
+                                   {% if saved_answer and option_key in saved_answer %}checked{% endif %}>
+                            <label for="q{{ question.id }}_{{ option_key }}">
+                                <span class="option-label">{{ option_key }}.</span>
+                                <span class="option-text">{{ option_value }}</span>
+                            </label>
+                        </div>
+                        {% endwith %}
+                        {% endfor %}
+                    
+                    {% elif question.question_type == 'fill_blank' %}
+                        <div class="fill-blank-item">
+                            <textarea name="answer_{{ question.id }}" 
+                                      placeholder="请输入您的答案" 
+                                      rows="3">{% if saved_answers %}{{ saved_answers|get_item:question.id }}{% endif %}</textarea>
+                        </div>
+                    
+                    {% elif question.question_type == 'short_answer' %}
+                        <div class="short-answer-item">
+                            <textarea name="answer_{{ question.id }}" 
+                                      placeholder="请输入您的答案" 
+                                      rows="6">{% if saved_answers %}{{ saved_answers|get_item:question.id }}{% endif %}</textarea>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" name="action" value="save_draft" class="btn btn-secondary">
+                💾 保存草稿
+            </button>
+            <button type="submit" name="action" value="submit" class="btn btn-primary" id="submitBtn">
+                ✅ 提交作业
+            </button>
+            <a href="{% url 'core:assignment_index' %}" class="btn btn-outline">
+                ← 返回作业列表
+            </a>
+        </div>
+    </form>
+    
+    <!-- 进度指示器 -->
+    <div class="progress-indicator">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text">
+            <span id="answeredCount">0</span> / {{ assignment.questions.count }} 题已答
+        </div>
+    </div>
+</div>
+
+<style>
+.assignment-take-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.assignment-header {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.assignment-header h1 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-size: 2rem;
+}
+
+.assignment-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.info-label {
+    color: #7f8c8d;
+    font-weight: 500;
+}
+
+.info-value {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.info-value.overdue {
+    color: #e74c3c;
+}
+
+.assignment-description {
+    margin-bottom: 20px;
+    padding: 20px;
+    background: #e8f4fd;
+    border-left: 4px solid #3498db;
+    border-radius: 6px;
+}
+
+.assignment-description h3 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.assignment-description p {
+    color: #34495e;
+    line-height: 1.6;
+}
+
+.time-warning {
+    text-align: center;
+    padding: 15px;
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 6px;
+}
+
+.timer {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.timer-label {
+    color: #856404;
+}
+
+.timer-value {
+    color: #d63031;
+}
+
+.questions-container {
+    margin-bottom: 30px;
+}
+
+.question-item {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.question-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #ecf0f1;
+}
+
+.question-number {
+    background: #3498db;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+.question-type {
+    background: #95a5a6;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.question-score {
+    background: #27ae60;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.question-content {
+    margin-bottom: 25px;
+}
+
+.question-content p {
+    color: #2c3e50;
+    line-height: 1.6;
+    font-size: 1.1rem;
+}
+
+.question-answer {
+    margin-bottom: 20px;
+}
+
+.option-item {
+    margin-bottom: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.option-item:hover {
+    background: #e9ecef;
+}
+
+.option-item input[type="radio"],
+.option-item input[type="checkbox"] {
+    margin-right: 12px;
+    transform: scale(1.2);
+}
+
+.option-item label {
+    display: flex;
+    align-items: flex-start;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.option-label {
+    font-weight: 600;
+    color: #3498db;
+    margin-right: 10px;
+    min-width: 25px;
+}
+
+.option-text {
+    color: #2c3e50;
+    line-height: 1.5;
+}
+
+.fill-blank-item textarea,
+.short-answer-item textarea {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #ecf0f1;
+    border-radius: 8px;
+    font-size: 1rem;
+    line-height: 1.5;
+    resize: vertical;
+    transition: border-color 0.2s ease;
+}
+
+.fill-blank-item textarea:focus,
+.short-answer-item textarea:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+.form-actions {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.progress-indicator {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: white;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    min-width: 200px;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #ecf0f1;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #27ae60;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.progress-text {
+    text-align: center;
+    color: #2c3e50;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.btn {
+    display: inline-block;
+    padding: 12px 24px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    text-align: center;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+}
+
+.btn-primary {
+    background: #27ae60;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #229954;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+.btn-outline {
+    background: transparent;
+    color: #7f8c8d;
+    border: 2px solid #bdc3c7;
+}
+
+.btn-outline:hover {
+    background: #bdc3c7;
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .assignment-take-container {
+        padding: 10px;
+    }
+    
+    .assignment-header {
+        padding: 20px;
+    }
+    
+    .assignment-info {
+        grid-template-columns: 1fr;
+    }
+    
+    .question-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .progress-indicator {
+        position: static;
+        margin-top: 20px;
+    }
+}
+</style>
+
+<script>
+// 倒计时功能
+function updateTimer() {
+    const dueTime = new Date('{{ assignment.due_time|date:"c" }}');
+    const now = new Date();
+    const timeDiff = dueTime - now;
+    
+    if (timeDiff <= 0) {
+        document.getElementById('timer-value').textContent = '已截止';
+        document.getElementById('timer-value').style.color = '#e74c3c';
+        document.getElementById('submitBtn').disabled = true;
+        document.getElementById('submitBtn').textContent = '已截止';
+        return;
+    }
+    
+    const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+    
+    let timeText = '';
+    if (days > 0) {
+        timeText = `${days}天 ${hours}小时 ${minutes}分钟`;
+    } else if (hours > 0) {
+        timeText = `${hours}小时 ${minutes}分钟 ${seconds}秒`;
+    } else {
+        timeText = `${minutes}分钟 ${seconds}秒`;
+    }
+    
+    document.getElementById('timer-value').textContent = timeText;
+    
+    // 时间紧急时改变颜色
+    if (timeDiff < 60 * 60 * 1000) { // 小于1小时
+        document.getElementById('timer-value').style.color = '#e74c3c';
+    } else if (timeDiff < 24 * 60 * 60 * 1000) { // 小于1天
+        document.getElementById('timer-value').style.color = '#f39c12';
+    }
+}
+
+// 更新进度
+function updateProgress() {
+    const totalQuestions = {{ assignment.questions.count }};
+    let answeredCount = 0;
+    
+    // 检查单选题和多选题
+    const radioGroups = {};
+    document.querySelectorAll('input[type="radio"]:checked').forEach(radio => {
+        const name = radio.name;
+        radioGroups[name] = true;
+    });
+    answeredCount += Object.keys(radioGroups).length;
+    
+    // 检查多选题
+    const checkboxGroups = {};
+    document.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
+        const name = checkbox.name;
+        checkboxGroups[name] = true;
+    });
+    answeredCount += Object.keys(checkboxGroups).length;
+    
+    // 检查文本答案
+    document.querySelectorAll('textarea').forEach(textarea => {
+        if (textarea.value.trim() !== '') {
+            answeredCount++;
+        }
+    });
+    
+    // 去重（避免重复计算多选题）
+    const allAnsweredNames = new Set();
+    document.querySelectorAll('input[type="radio"]:checked, input[type="checkbox"]:checked').forEach(input => {
+        allAnsweredNames.add(input.name);
+    });
+    document.querySelectorAll('textarea').forEach(textarea => {
+        if (textarea.value.trim() !== '') {
+            allAnsweredNames.add(textarea.name);
+        }
+    });
+    
+    answeredCount = allAnsweredNames.size;
+    const progress = (answeredCount / totalQuestions) * 100;
+    
+    document.getElementById('progressFill').style.width = progress + '%';
+    document.getElementById('answeredCount').textContent = answeredCount;
+}
+
+// 自动保存功能
+let autoSaveTimer;
+function autoSave() {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+        const formData = new FormData(document.getElementById('assignmentForm'));
+        formData.set('action', 'auto_save');
+        
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        }).then(response => {
+            if (response.ok) {
+                console.log('自动保存成功');
+            }
+        }).catch(error => {
+            console.error('自动保存失败:', error);
+        });
+    }, 3000); // 3秒后自动保存
+}
+
+// 提交确认
+document.getElementById('assignmentForm').addEventListener('submit', function(e) {
+    if (e.submitter && e.submitter.value === 'submit') {
+        const totalQuestions = {{ assignment.questions.count }};
+        const allAnsweredNames = new Set();
+        
+        document.querySelectorAll('input[type="radio"]:checked, input[type="checkbox"]:checked').forEach(input => {
+            allAnsweredNames.add(input.name);
+        });
+        document.querySelectorAll('textarea').forEach(textarea => {
+            if (textarea.value.trim() !== '') {
+                allAnsweredNames.add(textarea.name);
+            }
+        });
+        
+        const answeredCount = allAnsweredNames.size;
+        
+        if (answeredCount < totalQuestions) {
+            const unanswered = totalQuestions - answeredCount;
+            if (!confirm(`您还有 ${unanswered} 道题未作答，确定要提交吗？提交后将无法修改。`)) {
+                e.preventDefault();
+                return false;
+            }
+        } else {
+            if (!confirm('确定要提交作业吗？提交后将无法修改。')) {
+                e.preventDefault();
+                return false;
+            }
+        }
+    }
+});
+
+// 初始化
+document.addEventListener('DOMContentLoaded', function() {
+    updateTimer();
+    updateProgress();
+    
+    // 每秒更新倒计时
+    setInterval(updateTimer, 1000);
+    
+    // 监听答题变化
+    document.addEventListener('change', updateProgress);
+    document.addEventListener('input', function(e) {
+        updateProgress();
+        autoSave();
+    });
+});
+
+// 页面离开提醒
+window.addEventListener('beforeunload', function(e) {
+    const formData = new FormData(document.getElementById('assignmentForm'));
+    let hasAnswers = false;
+    
+    for (let [key, value] of formData.entries()) {
+        if (key.startsWith('answer_') && value.trim() !== '') {
+            hasAnswers = true;
+            break;
+        }
+    }
+    
+    if (hasAnswers) {
+        e.preventDefault();
+        e.returnValue = '您的答案可能未保存，确定要离开吗？';
+        return e.returnValue;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,657 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load chinese_name %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <!-- 页面标题 -->
+    <div class="page-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="page-title">批改作业</h1>
+                    <div class="page-subtitle">
+                        <span class="student-name">{{ submission.student.real_name }}</span>
+                        <span class="assignment-title">{{ assignment.title }}</span>
+                    </div>
+                </div>
+                <div class="score-summary">
+                    <div class="score-display">
+                        <span class="score-label">当前得分</span>
+                        <div class="score-value">
+                            <span id="totalScore">{{ submission.score|default:0 }}</span>
+                            <span class="score-total">/ {{ assignment.total_score }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="assignment-meta">
+                <div class="meta-item">
+                    <i class="fas fa-users"></i>
+                    <span>{{ assignment.teaching_class.name }}</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-id-card"></i>
+                    <span>学号：{{ submission.student.username }}</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-clock"></i>
+                    <span>提交时间：{{ submission.submit_time|date:"m月d日 H:i" }}</span>
+                </div>
+                {% if submission.is_late %}
+                    <div class="meta-item late">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>迟交</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+
+    <!-- 批改表单 -->
+    <form method="post" id="gradingForm">
+        {% csrf_token %}
+        
+        <!-- 题目列表 -->
+        <div class="questions-container">
+            {% for item in questions_with_data %}
+            <div class="question-card mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                第{{ forloop.counter }}题 
+                                <span class="question-type-badge">{{ item.question.question_type|chinese_name }}</span>
+                            </h5>
+                            <div class="question-score">
+                                <span class="text-muted">分值：{{ item.question.score }}分</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- 题目内容 -->
+                        <div class="question-content mb-3">
+                            <h6>题目：</h6>
+                            <div class="question-text">{{ item.question.content|linebreaks }}</div>
+                            
+                            {% if item.question.question_type == 'single_choice' or item.question.question_type == 'multiple_choice' %}
+                                <div class="options-list mt-2">
+                                    {% for option in item.question.options %}
+                                        <div class="option-item">
+                                            <span class="option-label">{{ forloop.counter|add:64|to_chr }}.</span>
+                                            <span class="option-text">{{ option }}</span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- 学生答案 -->
+                        <div class="student-answer mb-3">
+                            <h6>学生答案：</h6>
+                            <div class="answer-content">
+                                {% if item.question.question_type == 'single_choice' %}
+                                    {% if item.student_answer %}
+                                        <span class="selected-option">{{ item.student_answer|add:64|to_chr }}. {{ item.question.options|get_item:item.student_answer|default:"未选择" }}</span>
+                                    {% else %}
+                                        <span class="text-muted">未作答</span>
+                                    {% endif %}
+                                {% elif item.question.question_type == 'multiple_choice' %}
+                                    {% if item.student_answer %}
+                                        {% for choice in item.student_answer %}
+                                            <span class="selected-option me-2">{{ choice|add:64|to_chr }}. {{ item.question.options|get_item:choice }}</span>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">未作答</span>
+                                    {% endif %}
+                                {% else %}
+                                    {% if item.student_answer %}
+                                        <div class="text-answer">{{ item.student_answer|linebreaks }}</div>
+                                    {% else %}
+                                        <span class="text-muted">未作答</span>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- 批改区域 -->
+                        <div class="grading-area">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <label class="form-label">得分：</label>
+                                    <div class="input-group">
+                                        <input type="number" 
+                                               class="form-control score-input" 
+                                               name="question_{{ item.question.id }}_score"
+                                               value="{{ item.current_score }}"
+                                               min="0" 
+                                               max="{{ item.question.score }}" 
+                                               step="0.5"
+                                               data-max-score="{{ item.question.score }}">
+                                        <span class="input-group-text">/ {{ item.question.score }}</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-9">
+                                    <label class="form-label">评语：</label>
+                                    <textarea class="form-control" 
+                                              name="question_{{ item.question.id }}_comment"
+                                              rows="2" 
+                                              placeholder="请输入对该题的评语...">{{ item.current_comment }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- 总体评语 -->
+        <div class="overall-comment-card mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-comment-alt me-2"></i>总体评语
+                        </h5>
+                        <span class="comment-badge">整体评价</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="comment-area">
+                        <label class="form-label">
+                            <i class="fas fa-pen me-1"></i>请对学生的整体表现进行评价：
+                        </label>
+                        <textarea class="form-control comment-textarea" 
+                                  name="teacher_comments" 
+                                  rows="4" 
+                                  placeholder="请输入对整份作业的总体评语，包括学生的优点、不足以及改进建议...">{{ submission.teacher_comments }}</textarea>
+                        <div class="comment-tips">
+                            <small class="text-muted">
+                                <i class="fas fa-lightbulb me-1"></i>
+                                建议包含：学生的答题情况、知识掌握程度、学习建议等
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="action-buttons mb-4">
+            <button type="submit" class="btn btn-success btn-lg">
+                <i class="fas fa-check"></i> 完成批改
+            </button>
+            <a href="{% url 'core:assignment_result' assignment.id %}" class="btn btn-outline-secondary btn-lg">
+                <i class="fas fa-arrow-left"></i> 返回提交列表
+            </a>
+        </div>
+    </form>
+</div>
+
+<style>
+/* 页面头部样式 */
+.page-header {
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+.page-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.student-name {
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: #059669;
+    background: #dcfce7;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+}
+
+.assignment-title {
+    font-size: 1rem;
+    color: #6b7280;
+}
+
+.score-summary {
+    background: #f3f4f6;
+    padding: 1.5rem;
+    border-radius: 12px;
+    text-align: center;
+    min-width: 160px;
+}
+
+.score-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+}
+
+.score-value {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.score-value #totalScore {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #059669;
+}
+
+.score-total {
+    font-size: 1.125rem;
+    color: #9ca3af;
+}
+
+.assignment-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.meta-item i {
+    color: #9ca3af;
+}
+
+.meta-item.late {
+    color: #dc2626;
+}
+
+.meta-item.late i {
+    color: #dc2626;
+}
+
+/* 题目卡片样式 */
+.question-card {
+    margin-bottom: 2rem;
+}
+
+.question-card .card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.question-card .card-header {
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 1.25rem;
+}
+
+.question-card .card-header h5 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+}
+
+.question-type-badge {
+    background: #e0f2fe;
+    color: #0277bd;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-left: 0.5rem;
+}
+
+.question-score {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+/* 题目内容区域 */
+.question-content {
+    background: #f0f9ff;
+    padding: 1.25rem;
+    border-left: 4px solid #0ea5e9;
+    margin-bottom: 1.5rem;
+}
+
+.question-content h6 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.75rem;
+}
+
+.question-text {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #1f2937;
+}
+
+.options-list {
+    margin-top: 1rem;
+}
+
+.option-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    background: white;
+    border-radius: 6px;
+}
+
+.option-label {
+    font-weight: 600;
+    color: #0ea5e9;
+    margin-right: 0.75rem;
+    min-width: 24px;
+}
+
+.option-text {
+    flex: 1;
+    color: #374151;
+}
+
+/* 学生答案区域 */
+.student-answer {
+    background: #fef3c7;
+    padding: 1.25rem;
+    border-left: 4px solid #f59e0b;
+    margin-bottom: 1.5rem;
+}
+
+.student-answer h6 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #92400e;
+    margin-bottom: 0.75rem;
+}
+
+.answer-content {
+    color: #1f2937;
+}
+
+.selected-option {
+    display: inline-block;
+    background: #0ea5e9;
+    color: white;
+    padding: 0.375rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.text-answer {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    white-space: pre-wrap;
+    font-family: inherit;
+    line-height: 1.6;
+}
+
+/* 批改区域 */
+.grading-area {
+    background: #ecfdf5;
+    padding: 1.25rem;
+    border-left: 4px solid #10b981;
+    border-radius: 8px;
+}
+
+.grading-area label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #065f46;
+    margin-bottom: 0.5rem;
+}
+
+.score-input {
+    font-weight: 600;
+    text-align: center;
+    border: 2px solid #d1fae5;
+    border-radius: 8px;
+}
+
+.score-input:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.input-group-text {
+    background: #d1fae5;
+    border: 2px solid #d1fae5;
+    color: #065f46;
+    font-weight: 500;
+}
+
+/* 总体评语卡片样式 */
+.overall-comment-card {
+    margin-bottom: 2rem;
+}
+
+.overall-comment-card .card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.overall-comment-card .card-header {
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 1.25rem;
+}
+
+.overall-comment-card .card-header h5 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+}
+
+.overall-comment-card .card-header i {
+    color: #6366f1;
+}
+
+.comment-badge {
+    background: #e0e7ff;
+    color: #4338ca;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* 评语区域样式 */
+.comment-area {
+    background: #faf5ff;
+    padding: 1.25rem;
+    border-left: 4px solid #8b5cf6;
+    border-radius: 8px;
+}
+
+.comment-area label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #581c87;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+}
+
+.comment-area label i {
+    color: #8b5cf6;
+}
+
+.comment-textarea {
+    border: 2px solid #e9d5ff;
+    border-radius: 8px;
+    resize: vertical;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    padding: 1rem;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.comment-textarea:focus {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    outline: none;
+}
+
+.comment-textarea::placeholder {
+    color: #9ca3af;
+    font-style: italic;
+}
+
+.comment-tips {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 6px;
+    border: 1px solid #e9d5ff;
+}
+
+.comment-tips small {
+    display: flex;
+    align-items: center;
+    color: #6b7280;
+    font-size: 0.8rem;
+}
+
+.comment-tips i {
+    color: #f59e0b;
+}
+
+/* 操作按钮 */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    padding: 2rem 0;
+}
+
+.action-buttons .btn {
+    padding: 0.75rem 2rem;
+    font-weight: 600;
+    border-radius: 8px;
+    min-width: 160px;
+}
+
+.btn-success {
+    background: #10b981;
+    border-color: #10b981;
+}
+
+.btn-success:hover {
+    background: #059669;
+    border-color: #059669;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .page-header {
+        padding: 1.5rem 0;
+    }
+    
+    .page-title {
+        font-size: 1.5rem;
+    }
+    
+    .page-subtitle {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .assignment-meta {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .score-summary {
+        margin-top: 1rem;
+        min-width: auto;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .action-buttons .btn {
+        width: 100%;
+        max-width: 300px;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 计算总分
+    function calculateTotalScore() {
+        let total = 0;
+        document.querySelectorAll('.score-input').forEach(input => {
+            const score = parseFloat(input.value) || 0;
+            total += score;
+        });
+        document.getElementById('totalScore').textContent = total.toFixed(1);
+    }
+
+    // 监听分数输入变化
+    document.querySelectorAll('.score-input').forEach(input => {
+        input.addEventListener('input', function() {
+            const maxScore = parseFloat(this.dataset.maxScore);
+            const currentScore = parseFloat(this.value);
+            
+            if (currentScore > maxScore) {
+                this.value = maxScore;
+            }
+            if (currentScore < 0) {
+                this.value = 0;
+            }
+            
+            calculateTotalScore();
+        });
+    });
+
+    // 初始计算总分
+    calculateTotalScore();
+
+    // 表单提交确认
+    document.getElementById('gradingForm').addEventListener('submit', function(e) {
+        if (!confirm('确认完成批改吗？批改后将通知学生查看结果。')) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,118 @@
+{% extends 'simulators/simple_base.html' %}
+{% load static %}
+
+{% block title %}高尔顿板测试{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>高尔顿板模拟器 - 测试版</h2>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <canvas id="galtonCanvas" width="600" height="400" style="border: 1px solid #ccc; background: #f8f9fa;"></canvas>
+        </div>
+        <div class="col-md-4">
+            <button id="startBtn" class="btn btn-primary">开始测试</button>
+            <button id="resetBtn" class="btn btn-secondary">重置</button>
+            <p>状态: <span id="status">就绪</span></p>
+        </div>
+    </div>
+</div>
+
+<script>
+// 最简单的测试版本
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('页面加载完成');
+    
+    const canvas = document.getElementById('galtonCanvas');
+    const ctx = canvas.getContext('2d');
+    const startBtn = document.getElementById('startBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const status = document.getElementById('status');
+    
+    let balls = [];
+    let isRunning = false;
+    
+    // 绘制初始状态
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // 绘制简单的钉子
+        ctx.fillStyle = '#666';
+        for (let row = 0; row < 5; row++) {
+            for (let col = 0; col <= row; col++) {
+                const x = canvas.width/2 - row*20 + col*40;
+                const y = 100 + row*50;
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // 绘制球
+        ctx.fillStyle = '#ff0000';
+        balls.forEach(ball => {
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, 2, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // 绘制收集槽
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 6; i++) {
+            const x = canvas.width/2 - 100 + i*40;
+            ctx.strokeRect(x, 350, 35, 40);
+        }
+    }
+    
+    function animate() {
+        if (!isRunning) return;
+        
+        // 添加新球
+        if (Math.random() < 0.1 && balls.length < 20) {
+            balls.push({
+                x: canvas.width/2,
+                y: 50,
+                vx: 0,
+                vy: 1
+            });
+        }
+        
+        // 更新球的位置
+        balls.forEach((ball, index) => {
+            ball.y += ball.vy;
+            ball.vy += 0.1; // 重力
+            
+            // 简单的边界检查
+            if (ball.y > 350) {
+                balls.splice(index, 1);
+            }
+        });
+        
+        draw();
+        requestAnimationFrame(animate);
+    }
+    
+    startBtn.addEventListener('click', function() {
+        console.log('开始按钮被点击');
+        isRunning = true;
+        status.textContent = '运行中';
+        animate();
+    });
+    
+    resetBtn.addEventListener('click', function() {
+        console.log('重置按钮被点击');
+        isRunning = false;
+        balls = [];
+        status.textContent = '已重置';
+        draw();
+    });
+    
+    // 初始绘制
+    draw();
+    status.textContent = '初始化完成';
+    console.log('初始化完成');
+});
+</script>
+{% endblock %}

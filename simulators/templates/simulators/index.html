@@ -1,0 +1,207 @@
+{% extends 'simulators/base.html' %}
+
+{% block title %}生物统计学模拟器 - 首页{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="text-center mb-5">生物统计学模拟器</h1>
+            <p class="lead text-center text-muted mb-5">
+                通过交互式模拟器深入理解统计学概念和原理
+            </p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-6 col-lg-4">
+            <div class="card simulator-card h-100">
+                <div class="card-body text-center">
+                    <div class="simulator-icon mb-3">
+                        <i class="fas fa-chart-area fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="card-title">概率分布可视化器</h5>
+                    <p class="card-text">
+                        交互式探索各种概率分布的特性，支持连续和离散分布的可视化与计算。
+                    </p>
+                    <a href="{% url 'simulators:probability_distributions' %}" class="btn btn-primary">
+                        开始模拟
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card simulator-card h-100">
+                <div class="card-body text-center">
+                    <div class="simulator-icon mb-3">
+                        <i class="fas fa-chart-bar fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="card-title">高尔顿板模拟器</h5>
+                    <p class="card-text">
+                        观察小球通过钉板的随机过程，直观理解正态分布的形成机制和中心极限定理。
+                    </p>
+                    <a href="{% url 'simulators:galton_board' %}" class="btn btn-primary">
+                        开始模拟
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card simulator-card h-100">
+                <div class="card-body text-center">
+                    <div class="simulator-icon mb-3">
+                        <i class="fas fa-dice fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="card-title">抽样分布模拟器</h5>
+                    <p class="card-text">
+                        模拟不同样本量下的抽样分布，理解样本统计量的分布特性和中心极限定理。
+                    </p>
+                    <a href="{% url 'simulators:sampling_distribution' %}" class="btn btn-primary">
+                        开始模拟
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card simulator-card h-100">
+                <div class="card-body text-center">
+                    <div class="simulator-icon mb-3">
+                        <i class="fas fa-chart-line fa-3x text-success"></i>
+                    </div>
+                    <h5 class="card-title">单样本z检验模拟器</h5>
+                    <p class="card-text">
+                        学习单样本z检验的基本原理，理解检验统计量、p值和临界区域的概念。
+                    </p>
+                    <a href="{% url 'simulators:z_test_one_sample' %}" class="btn btn-success">
+                        开始学习
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card simulator-card h-100">
+                <div class="card-body text-center">
+                    <div class="simulator-icon mb-3">
+                        <i class="fas fa-chart-bar fa-3x text-success"></i>
+                    </div>
+                    <h5 class="card-title">单样本t检验模拟器</h5>
+                    <p class="card-text">
+                        探索小样本情况下的t检验，理解t分布与正态分布的差异。
+                    </p>
+                    <a href="{% url 'simulators:t_test_one_sample' %}" class="btn btn-success">
+                        开始学习
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-4">
+            <div class="card simulator-card h-100">
+                <div class="card-body text-center">
+                    <div class="simulator-icon mb-3">
+                        <i class="fas fa-percentage fa-3x text-warning"></i>
+                    </div>
+                    <h5 class="card-title">单样本比例检验模拟器</h5>
+                    <p class="card-text text-muted">
+                        检验样本比例是否等于某个特定值，理解二项分布的大样本近似。
+                    </p>
+                    <button class="btn btn-outline-secondary" disabled>
+                        即将推出
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card simulator-card h-100">
+                <div class="card-body text-center">
+                    <div class="simulator-icon mb-3">
+                        <i class="fas fa-square-root-alt fa-3x text-success"></i>
+                    </div>
+                    <h5 class="card-title">单样本方差卡方检验模拟器</h5>
+                    <p class="card-text text-muted">
+                        检验总体方差是否等于某个特定值，学习卡方分布的应用。
+                    </p>
+                    <button class="btn btn-outline-secondary" disabled>
+                        即将推出
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card simulator-card h-100">
+                <div class="card-body text-center">
+                    <div class="simulator-icon mb-3">
+                        <i class="fas fa-layer-group fa-3x text-dark"></i>
+                    </div>
+                    <h5 class="card-title">双样本F检验模拟器</h5>
+                    <p class="card-text text-muted">
+                        比较两个样本的方差是否相等，理解F分布和方差齐性检验。
+                    </p>
+                    <button class="btn btn-outline-secondary" disabled>
+                        即将推出
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card simulator-card h-100">
+                <div class="card-body text-center">
+                    <div class="simulator-icon mb-3">
+                        <i class="fas fa-balance-scale fa-3x text-success"></i>
+                    </div>
+                    <h5 class="card-title">双样本t检验模拟器</h5>
+                    <p class="card-text">
+                        比较两个独立样本的均值差异，学习独立样本和配对样本检验。
+                    </p>
+                    <a href="{% url 'simulators:t_test_two_sample' %}" class="btn btn-success">
+                        开始学习
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card simulator-card h-100">
+                <div class="card-body text-center">
+                    <div class="simulator-icon mb-3">
+                        <i class="fas fa-project-diagram fa-3x text-warning"></i>
+                    </div>
+                    <h5 class="card-title">回归分析模拟器</h5>
+                    <p class="card-text text-muted">
+                        可视化线性回归和非线性回归，理解相关性和因果关系。
+                    </p>
+                    <button class="btn btn-outline-secondary" disabled>
+                        即将推出
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card simulator-card h-100">
+                <div class="card-body text-center">
+                    <div class="simulator-icon mb-3">
+                        <i class="fas fa-calculator fa-3x text-secondary"></i>
+                    </div>
+                    <h5 class="card-title">置信区间计算器</h5>
+                    <p class="card-text text-muted">
+                        计算和可视化不同置信水平下的置信区间。
+                    </p>
+                    <button class="btn btn-outline-secondary" disabled>
+                        即将推出
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

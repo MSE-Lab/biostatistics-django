@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load chinese_name %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="post-detail-container">
+    <!-- 面包屑导航 -->
+    <nav class="breadcrumb" style="margin-bottom: 32px;">
+        <a href="{% url 'core:forum_index' %}">讨论区</a> > 
+        <a href="{% url 'core:forum_category' post.category.id %}">{{ post.category.name }}</a> > 
+        {{ post.title }}
+    </nav>
+
+    <!-- 帖子头部信息 -->
+    <div class="post-detail-header">
+        <div class="post-type-badge post-type-{{ post.post_type }}" style="margin-bottom: 20px;">
+            {% if post.post_type == 'question' %}❓
+            {% elif post.post_type == 'announcement' %}📢
+            {% else %}💬{% endif %}
+        </div>
+        
+        <h1 class="post-detail-title">
+            {% if post.is_pinned %}📌 {% endif %}
+            {% if post.is_locked %}🔒 {% endif %}
+            {{ post.title }}
+        </h1>
+        
+        <div class="post-detail-meta">
+            <div class="post-author-info">
+                <div class="author-avatar">
+                    {{ post.author.real_name|first }}
+                </div>
+                <div class="author-details">
+                    <div class="author-name">{{ post.author|chinese_full_name }}</div>
+                    <div class="post-time">{{ post.created_at|date:"Y年m月d日 H:i" }}</div>
+                </div>
+            </div>
+            
+            <div class="post-detail-stats">
+                <span>👁️ {{ post.view_count }} 浏览</span>
+                <span>💬 {{ post.reply_count }} 回复</span>
+                <span>📂 {{ post.category.name }}</span>
+                {% if post.visibility != 'public' %}
+                <span class="visibility-badge visibility-{{ post.visibility }}">
+                    {% if post.visibility == 'class_only' %}
+                        🏫 教学班内可见
+                    {% elif post.visibility == 'teacher_only' %}
+                        👨‍🏫 私信教师
+                    {% endif %}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 帖子内容 -->
+    <div class="post-detail-content">
+        {{ post.content|linebreaks }}
+    </div>
+
+    <!-- 回复区域 -->
+    <div class="replies-section">
+        <div class="replies-header">
+            <h2 class="replies-title">回复 ({{ replies.count }})</h2>
+            <div class="replies-count">共 {{ replies.count }} 条回复</div>
+        </div>
+
+        <!-- 回复列表 -->
+        <div class="replies-list">
+            {% for reply in replies %}
+            <div class="reply-item">
+                <div class="reply-header">
+                    <div class="author-avatar" style="width: 32px; height: 32px; font-size: 0.9rem;">
+                        {{ reply.author.real_name|first }}
+                    </div>
+                    <div class="reply-author">{{ reply.author|chinese_full_name }}</div>
+                    <div class="reply-time">{{ reply.created_at|date:"m月d日 H:i" }}</div>
+                    {% if reply.is_best_answer %}
+                    <span class="best-answer-badge" style="background: #34c759; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 500;">✓ 最佳答案</span>
+                    {% endif %}
+                </div>
+                
+                <div class="reply-content">
+                    {{ reply.content|linebreaks }}
+                </div>
+                
+                <div class="reply-actions">
+                    <button class="reply-action-btn" type="button">
+                        👍 {{ reply.like_count }}
+                    </button>
+                    {% if user.is_authenticated %}
+                    <button class="reply-action-btn" type="button" onclick="showReplyForm({{ reply.id }})">
+                        💬 回复
+                    </button>
+                    {% endif %}
+                    {% if user == post.author and post.post_type == 'question' and not reply.is_best_answer %}
+                    <button class="reply-action-btn" type="button" style="color: #34c759;">
+                        ✓ 设为最佳答案
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="no-replies">
+                <p>暂无回复，来发表第一个回复吧！</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- 回复表单 -->
+        {% if user.is_authenticated and not post.is_locked and can_reply %}
+        <div class="reply-form">
+            <h3>发表回复</h3>
+            <form method="post" action="{% url 'core:forum_reply' post.id %}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="content">回复内容</label>
+                    <textarea name="content" id="content" class="form-control" 
+                              rows="6" placeholder="请输入您的回复内容..." required></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">发表回复</button>
+                </div>
+            </form>
+        </div>
+        {% elif not user.is_authenticated %}
+        <div class="reply-form">
+            <div style="text-align: center; padding: 40px 20px; background: #f8f9fa; border-radius: 12px; color: #86868b;">
+                <p>请 <a href="{% url 'core:login' %}" style="color: #007aff;">登录</a> 后参与讨论</p>
+            </div>
+        </div>
+        {% elif post.is_locked %}
+        <div class="reply-form">
+            <div style="text-align: center; padding: 40px 20px; background: #f8f9fa; border-radius: 12px; color: #86868b;">
+                <p>🔒 该帖子已被锁定，无法回复</p>
+            </div>
+        </div>
+        {% elif not can_reply %}
+        <div class="reply-form">
+            <div style="text-align: center; padding: 40px 20px; background: #f8f9fa; border-radius: 12px; color: #86868b;">
+                <p>🚫 您没有权限回复此帖子</p>
+                {% if post.visibility == 'class_only' %}
+                <small>此帖子仅限教学班内成员回复</small>
+                {% elif post.visibility == 'teacher_only' %}
+                <small>此为私信帖子，仅限任课教师回复</small>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function showReplyForm(replyId) {
+    // 这里可以添加回复特定回复的功能
+    document.getElementById('content').focus();
+    document.getElementById('content').placeholder = '回复 #' + replyId + '...';
+}
+</script>
+{% endblock %}

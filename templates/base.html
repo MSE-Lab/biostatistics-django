@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}生物统计学课程平台{% endblock %}</title>
+    {% load static %}
+    {% load chinese_name %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <img src="{% static 'images/LOGO-2022.png' %}" alt="Logo" class="nav-logo">
+                <span class="brand-text">AI+生物统计学</span>
+            </div>
+            <div class="nav-menu">
+                <a href="{% url 'core:home' %}" class="nav-link">首页</a>
+                <a href="{% url 'core:courses' %}" class="nav-link">课程</a>
+                <a href="{% url 'core:textbook' %}" class="nav-link">教材</a>
+                <a href="{% url 'core:resources' %}" class="nav-link">资源</a>
+                {% if user.is_authenticated %}
+                <a href="{% url 'simulators:index' %}" class="nav-link">模拟器</a>
+                <a href="{% url 'core:forum_index' %}" class="nav-link">讨论区</a>
+                <a href="{% url 'core:assignment_index' %}" class="nav-link">
+                    作业
+                    {% if user.user_type == 'student' %}
+                        {% with pending_count=user.get_pending_assignments_count %}
+                            {% if pending_count > 0 %}
+                            <span class="nav-badge assignment-badge" style="position: absolute; top: -8px; right: -8px; background: #ff9500; color: white; font-size: 0.7rem; font-weight: 600; padding: 2px 6px; border-radius: 10px; min-width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(255, 149, 0, 0.3);">
+                                {% if pending_count > 99 %}99+{% else %}{{ pending_count }}{% endif %}
+                            </span>
+                            {% endif %}
+                        {% endwith %}
+                    {% endif %}
+                </a>
+                {% endif %}
+                <a href="{% url 'core:about' %}" class="nav-link">课组</a>
+            </div>
+            <div class="nav-auth">
+                {% if user.is_authenticated %}
+                    <div class="user-menu">
+                        <button class="user-button" onclick="toggleUserMenu(event)">
+                            <span class="user-name">{{ user|chinese_full_name }}</span>
+                            {% if user.user_type == 'teacher' %}
+                                {% with unread_count=user.get_unread_private_messages_count %}
+                                    {% if unread_count > 0 %}
+                                    <span class="message-badge">
+                                        {% if unread_count > 99 %}99+{% else %}{{ unread_count }}{% endif %}
+                                    </span>
+                                    {% endif %}
+                                {% endwith %}
+                            {% elif user.user_type == 'student' %}
+                                {% with unread_count=user.get_unread_replies_count %}
+                                    {% if unread_count > 0 %}
+                                    <span class="message-badge reply-badge">
+                                        {% if unread_count > 99 %}99+{% else %}{{ unread_count }}{% endif %}
+                                    </span>
+                                    {% endif %}
+                                {% endwith %}
+                            {% endif %}
+                            <svg class="user-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M7 10L12 15L17 10H7Z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                        <div class="user-dropdown" id="userDropdown">
+                            <div class="dropdown-header">
+                                <div class="user-info">
+                                    <div class="user-avatar">{{ user|chinese_name_initial }}</div>
+                                    <div class="user-details">
+                                        <div class="user-full-name">{{ user|chinese_full_name }}</div>
+                                        <div class="user-role">
+                                            {% if user.is_superuser %}
+                                                系统管理员
+                                            {% elif user.user_type == 'teacher' %}
+                                                教师
+                                            {% elif user.user_type == 'admin' %}
+                                                管理员
+                                            {% else %}
+                                                学生
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dropdown-menu">
+                                {% if user.is_superuser %}
+                                    <a href="{% url 'admin:index' %}" class="dropdown-item">
+                                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        后台管理
+                                    </a>
+                                {% endif %}
+                                {% if user.user_type == 'teacher' %}
+                                    <a href="{% url 'core:class_management' %}" class="dropdown-item">
+                                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M19 21V5C19 4.46957 18.7893 3.96086 18.4142 3.58579C18.0391 3.21071 17.5304 3 17 3H7C6.46957 3 5.96086 3.21071 5.58579 3.58579C5.21071 3.96086 5 4.46957 5 5V21L12 17L19 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        教学班管理
+                                    </a>
+                                    {% with unread_count=user.get_unread_private_messages_count %}
+                                    <a href="{% url 'core:forum_index' %}?filter=private_messages" class="dropdown-item">
+                                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        学生私信
+                                        {% if unread_count > 0 %}
+                                        <span class="dropdown-badge">{{ unread_count }}</span>
+                                        {% endif %}
+                                    </a>
+                                    {% endwith %}
+                                {% elif user.user_type == 'student' %}
+                                    {% with unread_count=user.get_unread_replies_count %}
+                                    <a href="{% url 'core:forum_index' %}" class="dropdown-item">
+                                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M8 12H16M8 16H16M8 8H16M4 4H20C20.5523 4 21 4.44772 21 5V19C21 19.5523 20.5523 20 20 20H4C3.44772 20 3 19.5523 3 19V5C3 4.44772 3.44772 4 4 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        我的帖子回复
+                                        {% if unread_count > 0 %}
+                                        <span class="dropdown-badge reply-badge">{{ unread_count }}</span>
+                                        {% endif %}
+                                    </a>
+                                    {% endwith %}
+                                {% endif %}
+                                <a href="#" class="dropdown-item">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    个人资料
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <a href="{% url 'core:logout' %}" class="dropdown-item logout">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <polyline points="16,17 21,12 16,7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    退出登录
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="auth-buttons">
+                        <a href="{% url 'core:login' %}" class="btn-login">登录</a>
+                        <a href="{% url 'core:register' %}" class="btn-register">注册</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容 -->
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- 页脚 -->
+    <footer>
+        <div class="footer-container">
+
+            <div class="footer-bottom">
+                <p>&copy; 2024 云南大学生命科学学院生物统计学课程平台. 保留所有权利.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 用户菜单切换
+        function toggleUserMenu() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        // 点击外部关闭用户菜单
+        document.addEventListener('click', function(event) {
+            const userMenu = document.querySelector('.user-menu');
+            const dropdown = document.getElementById('userDropdown');
+            
+            if (userMenu && !userMenu.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+
+        // 轮播功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const heroSection = document.getElementById('hero-section');
+            if (!heroSection) return;
+
+            const slides = document.querySelectorAll('.hero-bg-slide');
+            const indicators = document.querySelectorAll('.carousel-indicator');
+            let currentSlide = 0;
+            let slideInterval;
+
+            function showSlide(index) {
+                // 移除所有活跃状态
+                slides.forEach(slide => slide.classList.remove('active'));
+                indicators.forEach(indicator => indicator.classList.remove('active'));
+                
+                // 添加活跃状态到当前幻灯片
+                if (slides[index]) {
+                    slides[index].classList.add('active');
+                }
+                if (indicators[index]) {
+                    indicators[index].classList.add('active');
+                }
+                
+                currentSlide = index;
+                console.log('切换到幻灯片:', index);
+            }
+
+            function nextSlide() {
+                const next = (currentSlide + 1) % slides.length;
+                showSlide(next);
+            }
+
+            function startSlideshow() {
+                slideInterval = setInterval(nextSlide, 3000); // 3秒间隔
+                console.log('轮播已启动，间隔3秒');
+            }
+
+            function stopSlideshow() {
+                if (slideInterval) {
+                    clearInterval(slideInterval);
+                    slideInterval = null;
+                }
+            }
+
+            // 指示器点击事件
+            indicators.forEach((indicator, index) => {
+                indicator.addEventListener('click', function() {
+                    console.log('点击指示器:', index);
+                    stopSlideshow();
+                    showSlide(index);
+                    startSlideshow();
+                });
+            });
+
+            // 鼠标悬停暂停轮播
+            heroSection.addEventListener('mouseenter', stopSlideshow);
+            heroSection.addEventListener('mouseleave', startSlideshow);
+
+            // 启动轮播
+            if (slides.length > 1) {
+                startSlideshow();
+                console.log('轮播功能已初始化，共', slides.length, '张幻灯片');
+            }
+
+            // 测试函数
+            window.testCarousel = function() {
+                console.log('当前幻灯片:', currentSlide);
+                console.log('幻灯片数量:', slides.length);
+                console.log('指示器数量:', indicators.length);
+                nextSlide();
+            };
+        });
+
+        // 导航栏当前页面高亮
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            navLinks.forEach(link => {
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

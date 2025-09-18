@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - 生物统计学课程平台{% endblock %}
+
+{% block content %}
+<!-- 页面标题 -->
+<section class="page-header">
+    <div class="container">
+        <h1 class="page-title">{{ title }}</h1>
+        <p class="page-subtitle">系统学习生物统计学的核心知识</p>
+    </div>
+</section>
+
+<!-- 课程列表 -->
+<section class="courses-section">
+    <div class="container">
+        <div class="courses-grid">
+            {% for course in courses %}
+            <div class="course-card-compact" onclick="openCourseModal({{ course.id }})">
+                <div class="course-card-header">
+                    <div class="course-number-compact">{{ course.id }}</div>
+                    <div class="course-card-content">
+                        <h3 class="course-card-title">{{ course.title }}</h3>
+                        <p class="course-card-description">{{ course.description }}</p>
+                        <div class="course-card-stats">
+                            <span class="stat-item">📚 {{ course.topics|length }} 个知识点</span>
+                            {% if course.materials %}
+                            <span class="stat-item">📄 {{ course.materials|length }} 个资料</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="course-card-footer">
+                    <span class="view-details">点击查看详情 →</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- 课程详情模态框 -->
+<div id="courseModal" class="modal" onclick="closeCourseModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h2 id="modalTitle"></h2>
+            <span class="close" onclick="closeCourseModal()">&times;</span>
+        </div>
+        <div class="modal-body" id="modalBody">
+            <!-- 详细内容将通过JavaScript动态加载 -->
+        </div>
+    </div>
+</div>
+
+<!-- 隐藏的详细内容模板 -->
+<div style="display: none;">
+    {% for course in courses %}
+    <div id="course-detail-{{ course.id }}">
+        <div class="course-content">
+            <div class="course-overview">
+                <h3>课程概述</h3>
+                <p>{{ course.content }}</p>
+            </div>
+            
+            <div class="course-topics">
+                <h3>主要内容</h3>
+                <ul class="topics-list">
+                    {% for topic in course.topics %}
+                    <li>{{ topic }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            
+            {% if course.key_concepts %}
+            <div class="course-concepts">
+                <h3>核心概念</h3>
+                <div class="concepts-list">
+                    {% for concept in course.key_concepts %}
+                    <div class="concept-item">
+                        <h4>{{ concept.term }}</h4>
+                        <p>{{ concept.definition }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if course.historical_figures %}
+            <div class="course-history">
+                <h3>重要历史人物</h3>
+                <ul class="history-list">
+                    {% for figure in course.historical_figures %}
+                    <li>{{ figure }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            {% if course.statistical_methods %}
+            <div class="course-methods">
+                <h3>统计方法</h3>
+                <ul class="methods-list">
+                    {% for method in course.statistical_methods %}
+                    <li>{{ method }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            {% if course.materials %}
+            <div class="course-materials">
+                <h3>课程资料</h3>
+                <div class="materials-list">
+                    {% for material in course.materials %}
+                    <div class="material-item">
+                        <div class="material-icon">
+                            {% if material.type == 'pdf' %}📄{% endif %}
+                        </div>
+                        <div class="material-info">
+                            <h4>{{ material.name }}</h4>
+                            <p>{{ material.description }}</p>
+                        </div>
+                        <div class="material-actions">
+                            <a href="{{ material.url }}" target="_blank" class="btn-primary">查看</a>
+                            <a href="{{ material.url }}" download class="btn-secondary">下载</a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="course-materials">
+                <h3>课程资料</h3>
+                <p class="no-materials">课程资料即将上线，敬请期待...</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+// 课程数据
+const courseData = {
+    {% for course in courses %}
+    {{ course.id }}: {
+        title: "第{{ course.id }}章 {{ course.title }}",
+        content: `{{ course.content|escapejs }}`,
+        topics: [{% for topic in course.topics %}"{{ topic|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+        {% if course.key_concepts %}
+        concepts: [
+            {% for concept in course.key_concepts %}
+            {term: "{{ concept.term|escapejs }}", definition: "{{ concept.definition|escapejs }}"}{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        {% endif %}
+        {% if course.materials %}
+        materials: [
+            {% for material in course.materials %}
+            {name: "{{ material.name|escapejs }}", url: "{{ material.url }}", description: "{{ material.description|escapejs }}"}{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ]
+        {% endif %}
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+};
+
+function openCourseModal(courseId) {
+    const modal = document.getElementById('courseModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+    
+    const course = courseData[courseId];
+    if (!course) {
+        console.error('Course not found:', courseId);
+        return;
+    }
+    
+    modalTitle.textContent = course.title;
+    
+    let content = '<div class="modal-content-wrapper">' +
+        // 课程概述 - 全宽
+        '<div class="course-overview modal-content-full">' +
+        '<h3>课程概述</h3>' +
+        '<p>' + course.content + '</p>' +
+        '</div>' +
+        
+        // 主要内容和核心概念 - 两列布局
+        '<div class="modal-content-grid">' +
+        '<div class="course-topics">' +
+        '<h3>主要内容</h3>' +
+        '<ul class="topics-list">' +
+        course.topics.map(function(topic) { return '<li>' + topic + '</li>'; }).join('') +
+        '</ul>' +
+        '</div>';
+    
+    if (course.concepts) {
+        content += '<div class="course-concepts">' +
+            '<h3>核心概念</h3>' +
+            '<div class="concepts-list">' +
+            course.concepts.map(function(concept) {
+                return '<div class="concept-item">' +
+                    '<h4>' + concept.term + '</h4>' +
+                    '<p>' + concept.definition + '</p>' +
+                    '</div>';
+            }).join('') +
+            '</div>' +
+            '</div>';
+    } else {
+        content += '<div class="course-concepts">' +
+            '<h3>核心概念</h3>' +
+            '<p class="no-concepts">本章节暂无核心概念整理</p>' +
+            '</div>';
+    }
+    
+    content += '</div>'; // 结束 modal-content-grid
+    
+    // 课程资料 - 全宽
+    if (course.materials) {
+        content += '<div class="course-materials modal-content-full">' +
+            '<h3>课程资料</h3>' +
+            '<div class="materials-list">' +
+            course.materials.map(function(material) {
+                return '<div class="material-item">' +
+                    '<div class="material-icon">PDF</div>' +
+                    '<div class="material-info">' +
+                    '<h4>' + material.name + '</h4>' +
+                    '<p>' + material.description + '</p>' +
+                    '</div>' +
+                    '<div class="material-actions">' +
+                    '<a href="' + material.url + '" target="_blank" class="btn-primary">查看</a>' +
+                    '<a href="' + material.url + '" download class="btn-secondary">下载</a>' +
+                    '</div>' +
+                    '</div>';
+            }).join('') +
+            '</div>' +
+            '</div>';
+    } else {
+        content += '<div class="course-materials modal-content-full">' +
+            '<h3>课程资料</h3>' +
+            '<p class="no-materials">课程资料即将上线，敬请期待...</p>' +
+            '</div>';
+    }
+    
+    content += '</div>'; // 结束 modal-content-wrapper
+    
+    modalBody.innerHTML = content;
+    
+    // 使用CSS类来控制显示
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeCourseModal(event) {
+    if (!event || event.target.id === 'courseModal' || event.target.className === 'close') {
+        const modal = document.getElementById('courseModal');
+        modal.classList.remove('show');
+        document.body.style.overflow = 'auto';
+    }
+}
+</script>
+{% endblock %}

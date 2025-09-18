@@ -1,0 +1,285 @@
+{% extends 'simulators/base.html' %}
+
+{% block title %}双样本t检验模拟器{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="text-center mb-4">双样本t检验模拟器</h1>
+            <p class="text-center text-muted mb-4">
+                学习独立样本和配对样本t检验，比较两个总体均值的差异
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 左侧参数设置区 -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">参数设置</h5>
+                </div>
+                <div class="card-body">
+                    <!-- 检验类型选择 -->
+                    <div class="mb-4">
+                        <h6 class="text-info">检验类型</h6>
+                        <div class="mb-3">
+                            <select class="form-select" id="testDesign">
+                                <option value="independent">独立样本t检验</option>
+                                <option value="paired">配对样本t检验</option>
+                            </select>
+                            <small class="form-text text-muted" id="testDesignHelp">
+                                独立样本：比较两个独立组的均值
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- 假设设定 -->
+                    <div class="mb-4">
+                        <h6 class="text-primary">假设设定</h6>
+                        <div class="mb-3">
+                            <label for="mu0Diff" class="form-label">原假设均值差 μ₁-μ₂</label>
+                            <input type="number" class="form-control" id="mu0Diff" value="0" step="0.1">
+                            <small class="form-text text-muted">H₀: μ₁ - μ₂ = 0</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="testType" class="form-label">检验类型</label>
+                            <select class="form-select" id="testType">
+                                <option value="two-tailed">双侧检验 (μ₁ ≠ μ₂)</option>
+                                <option value="left-tailed">左侧检验 (μ₁ < μ₂)</option>
+                                <option value="right-tailed">右侧检验 (μ₁ > μ₂)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 总体参数 -->
+                    <div class="mb-4">
+                        <h6 class="text-success">总体参数</h6>
+                        <div class="row">
+                            <div class="col-6">
+                                <label for="trueMu1" class="form-label">总体1均值 μ₁</label>
+                                <input type="number" class="form-control" id="trueMu1" value="0" step="0.1">
+                            </div>
+                            <div class="col-6">
+                                <label for="trueMu2" class="form-label">总体2均值 μ₂</label>
+                                <input type="number" class="form-control" id="trueMu2" value="0" step="0.1">
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-6">
+                                <label for="trueSigma1" class="form-label">总体1标准差 σ₁</label>
+                                <input type="number" class="form-control" id="trueSigma1" value="1" min="0.1" step="0.1">
+                            </div>
+                            <div class="col-6">
+                                <label for="trueSigma2" class="form-label">总体2标准差 σ₂</label>
+                                <input type="number" class="form-control" id="trueSigma2" value="1" min="0.1" step="0.1">
+                            </div>
+                        </div>
+                        <div class="mt-2" id="correlationDiv" style="display: none;">
+                            <label for="correlation" class="form-label">配对相关系数 ρ</label>
+                            <input type="range" class="form-range" id="correlation" min="-0.9" max="0.9" step="0.1" value="0.5">
+                            <small class="form-text text-muted">当前值: <span id="correlationValue">0.5</span></small>
+                        </div>
+                    </div>
+
+                    <!-- 样本设置 -->
+                    <div class="mb-4">
+                        <h6 class="text-warning">样本设置</h6>
+                        <div class="row">
+                            <div class="col-6">
+                                <label for="sampleSize1" class="form-label">样本1大小 n₁: <span id="sampleSize1Value">15</span></label>
+                                <input type="range" class="form-range" id="sampleSize1" min="3" max="50" value="15">
+                            </div>
+                            <div class="col-6" id="sampleSize2Div">
+                                <label for="sampleSize2" class="form-label">样本2大小 n₂: <span id="sampleSize2Value">15</span></label>
+                                <input type="range" class="form-range" id="sampleSize2" min="3" max="50" value="15">
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <small class="form-text text-muted" id="dfInfo">
+                                自由度 df = n₁ + n₂ - 2 = 28
+                            </small>
+                        </div>
+                        <div class="mt-2">
+                            <label for="alpha" class="form-label">显著性水平 α</label>
+                            <select class="form-select" id="alpha">
+                                <option value="0.01">0.01</option>
+                                <option value="0.05" selected>0.05</option>
+                                <option value="0.10">0.10</option>
+                            </select>
+                        </div>
+                        <div class="mt-2" id="varianceAssumption">
+                            <div class="alert alert-info" style="font-size: 0.85em; padding: 0.5rem;">
+                                <strong>方差齐性检验：</strong><br>
+                                <span id="fTestResult">将自动进行F检验判断方差齐性</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 控制按钮 -->
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-primary" id="generateSample">
+                            <i class="fas fa-dice"></i> 生成样本并检验
+                        </button>
+                        <button type="button" class="btn btn-success" id="runSimulation">
+                            <i class="fas fa-play"></i> 重复模拟 (1000次)
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="resetSimulation">
+                            <i class="fas fa-undo"></i> 重置
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧可视化区 -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">检验可视化</h5>
+                </div>
+                <div class="card-body">
+                    <!-- 分布图 -->
+                    <div class="mb-4">
+                        <canvas id="distributionChart" width="800" height="400"></canvas>
+                    </div>
+                    
+                    <!-- 检验步骤说明 -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title text-primary">检验步骤</h6>
+                                    <ol class="mb-0 small" id="testSteps">
+                                        <li>建立假设：H₀ vs H₁</li>
+                                        <li>选择显著性水平</li>
+                                        <li>计算检验统计量</li>
+                                        <li>做出统计决策</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title text-success">当前假设</h6>
+                                    <div id="hypothesisDisplay" class="small">
+                                        <div><strong>H₀:</strong> μ₁ - μ₂ = <span id="h0Value">0</span></div>
+                                        <div><strong>H₁:</strong> <span id="h1Value">μ₁ ≠ μ₂</span></div>
+                                        <div><strong>α:</strong> <span id="alphaValue">0.05</span></div>
+                                        <div><strong>检验类型:</strong> <span id="testTypeDisplay">独立样本</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 检验结果区 -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">检验结果</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- 单次检验结果 -->
+                        <div class="col-lg-6">
+                            <h6 class="text-primary">当前检验结果</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>样本1均值 (x̄₁)</strong></td>
+                                            <td id="sampleMean1">-</td>
+                                            <td><strong>样本1标准差 (s₁)</strong></td>
+                                            <td id="sampleStd1">-</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>样本2均值 (x̄₂)</strong></td>
+                                            <td id="sampleMean2">-</td>
+                                            <td><strong>样本2标准差 (s₂)</strong></td>
+                                            <td id="sampleStd2">-</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>均值差 (x̄₁-x̄₂)</strong></td>
+                                            <td colspan="3" id="meanDifference">-</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>合并标准差 (sp)</strong></td>
+                                            <td colspan="3" id="pooledStd">-</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>检验统计量 (t)</strong></td>
+                                            <td colspan="3" id="testStatistic">-</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>自由度 (df)</strong></td>
+                                            <td colspan="3" id="degreesOfFreedom">-</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>p值</strong></td>
+                                            <td colspan="3" id="pValue">-</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>临界值</strong></td>
+                                            <td colspan="3" id="criticalValue">-</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>检验结论</strong></td>
+                                            <td colspan="3" id="testConclusion">-</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>95% 置信区间</strong></td>
+                                            <td colspan="3" id="confidenceInterval">-</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 模拟统计结果 -->
+                        <div class="col-lg-6">
+                            <h6 class="text-success">模拟统计 (1000次)</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>拒绝H₀次数</strong></td>
+                                            <td id="rejectionCount">-</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>拒绝率</strong></td>
+                                            <td id="rejectionRate">-</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>第二类错误率</strong></td>
+                                            <td id="typeIIError">-</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>检验功效</strong></td>
+                                            <td id="power">-</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>平均p值</strong></td>
+                                            <td id="avgPValue">-</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>模拟状态</strong></td>
+                                            <td id="simulationStatus">未开始</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% load static %}
+<script src="{% static 'js/t_test_two_sample.js' %}"></script>
+{% endblock %}

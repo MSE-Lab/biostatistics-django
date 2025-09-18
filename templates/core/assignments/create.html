@@ -1,0 +1,957 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}创建作业{% endblock %}
+
+{% block content %}
+<div class="assignment-form-container">
+    <div class="form-header">
+        <h1>创建新作业</h1>
+        <p>设置作业基本信息和题目内容</p>
+    </div>
+
+    <form method="post" class="assignment-form" id="assignmentForm">
+        {% csrf_token %}
+        
+        <!-- 基本信息 -->
+        <div class="form-section">
+            <h2>📝 基本信息</h2>
+            
+            <div class="form-group">
+                <label for="title">作业标题 *</label>
+                <input type="text" id="title" name="title" required maxlength="200" 
+                       placeholder="请输入作业标题，如：第一章练习题">
+            </div>
+            
+            <div class="form-group">
+                <label for="description">作业描述</label>
+                <textarea id="description" name="description" rows="4" 
+                          placeholder="请描述作业要求、注意事项等"></textarea>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="teaching_class">教学班 *</label>
+                    <select id="teaching_class" name="teaching_class" required>
+                        <option value="">请选择教学班</option>
+                        {% for class in teaching_classes %}
+                        <option value="{{ class.id }}">{{ class.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="chapter">所属章节</label>
+                    <select id="chapter" name="chapter">
+                        <option value="">请选择章节</option>
+                        {% for i in "123456789012345"|make_list %}
+                        <option value="{{ forloop.counter }}">第{{ forloop.counter }}章</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="publish_time">发布时间 *</label>
+                    <input type="datetime-local" id="publish_time" name="publish_time" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="due_time">截止时间 *</label>
+                    <input type="datetime-local" id="due_time" name="due_time" required>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="total_score">总分</label>
+                    <input type="number" id="total_score" name="total_score" value="100" min="1" max="1000">
+                </div>
+                
+                <div class="form-group">
+                    <label for="allow_late_submission">允许逾期提交</label>
+                    <input type="checkbox" id="allow_late_submission" name="allow_late_submission">
+                </div>
+            </div>
+        </div>
+
+        <!-- 题目设置 -->
+        <div class="form-section">
+            <h2>📋 题目设置</h2>
+            <div id="questions-container">
+                <!-- 题目将通过JavaScript动态添加 -->
+            </div>
+            
+            <div class="question-actions">
+                <button type="button" class="btn btn-secondary" onclick="addQuestion('single_choice')">
+                    ➕ 添加单选题
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="addQuestion('multiple_choice')">
+                    ➕ 添加多选题
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="addQuestion('fill_blank')">
+                    ➕ 添加填空题
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="addQuestion('true_false')">
+                    ➕ 添加判断题
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="addQuestion('short_answer')">
+                    ➕ 添加简答题
+                </button>
+            </div>
+        </div>
+
+        <!-- 提交按钮 -->
+        <div class="form-actions">
+            <button type="submit" name="action" value="save_draft" class="btn btn-secondary">
+                💾 保存草稿
+            </button>
+            <button type="submit" name="action" value="publish" class="btn btn-primary">
+                🚀 发布作业
+            </button>
+            <a href="{% url 'core:assignment_index' %}" class="btn btn-outline">
+                ❌ 取消
+            </a>
+        </div>
+    </form>
+</div>
+
+<style>
+.assignment-form-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.form-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.form-header h1 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.form-header p {
+    color: #7f8c8d;
+}
+
+.assignment-form {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.form-section {
+    padding: 30px;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+}
+
+.form-section h2 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-size: 1.3rem;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ecf0f1;
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: border-color 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+.form-group input[type="checkbox"] {
+    width: auto;
+    margin-right: 8px;
+}
+
+.question-item {
+    background: #f8f9fa;
+    border: 2px solid #ecf0f1;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.question-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.question-type {
+    background: #3498db;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.question-remove {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.question-remove:hover {
+    background: #c0392b;
+}
+
+.question-content {
+    margin-bottom: 20px;
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.question-content label {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.question-content textarea {
+    min-height: 100px;
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    line-height: 1.5;
+    resize: vertical;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.question-content textarea:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    outline: none;
+}
+
+.question-options {
+    margin-bottom: 20px;
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.question-options > label {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 15px;
+    display: block;
+}
+
+.option-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 12px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+    transition: all 0.2s ease;
+}
+
+.option-item:hover {
+    background: #e3f2fd;
+    border-color: #90caf9;
+}
+
+.option-item input[type="text"] {
+    flex: 1;
+    min-width: 300px;
+    padding: 12px 15px;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.option-item input[type="text"]:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    outline: none;
+}
+
+.option-item input[type="radio"],
+.option-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+}
+
+.option-item span {
+    font-weight: 600;
+    color: #2c3e50;
+    min-width: 25px;
+}
+
+.option-remove {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+    white-space: nowrap;
+}
+
+.option-remove:hover {
+    background: #c0392b;
+}
+
+/* 判断题专用样式 */
+.true-false-options {
+    display: flex;
+    gap: 20px;
+    margin: 20px 0;
+    padding: 0;
+}
+
+.true-false-options .option-item {
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 20px 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex: 1;
+    position: relative;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.true-false-options .option-item:hover {
+    border-color: #3498db;
+    background: #f8fafe;
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.15);
+    transform: translateY(-2px);
+}
+
+.true-false-options .option-item input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.true-false-options .option-item input[type="radio"]:checked + label {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    border-radius: 8px;
+    padding: 5px 10px;
+    margin: -5px -10px;
+}
+
+.true-false-options .option-item input[type="radio"]:checked ~ * {
+    color: white;
+}
+
+.true-false-options .option-item label {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+    margin: 0;
+    width: 100%;
+    padding: 0;
+    background: transparent;
+    border: none;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.true-false-options .option-item input[type="radio"]:checked + label .option-symbol {
+    background: white;
+    color: #3498db;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.option-symbol {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.option-symbol.correct {
+    background: linear-gradient(135deg, #00b894, #00a085);
+    color: white;
+}
+
+.option-symbol.incorrect {
+    background: linear-gradient(135deg, #e17055, #d63031);
+    color: white;
+}
+
+.option-text {
+    font-weight: 600;
+    font-size: 16px;
+    color: #2c3e50;
+    transition: color 0.3s ease;
+}
+
+.true-false-note {
+    margin-top: 15px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+    border-left: 4px solid #3498db;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.true-false-note small {
+    color: #546e7a !important;
+    font-size: 13px;
+    line-height: 1.4;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.true-false-note i {
+    color: #3498db;
+    font-size: 14px;
+}
+
+/* 填空题和简答题的参考答案样式 */
+.answer-textarea {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    line-height: 1.5;
+    resize: vertical;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background: #ffffff;
+    font-family: inherit;
+}
+
+.answer-textarea:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    outline: none;
+}
+
+.answer-textarea::placeholder {
+    color: #6c757d;
+    font-style: italic;
+}
+
+.add-option {
+    background: #27ae60;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+    margin-top: 10px;
+}
+
+.add-option:hover {
+    background: #229954;
+}
+
+.question-score {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #ffffff;
+    padding: 15px 20px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.question-score label {
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 0;
+}
+
+.question-score input {
+    width: 100px;
+    padding: 10px 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    font-size: 1rem;
+    text-align: center;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.question-score input:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    outline: none;
+}
+
+.question-score span {
+    color: #7f8c8d;
+    font-weight: 500;
+}
+
+.question-actions {
+    text-align: center;
+    margin-top: 30px;
+    padding: 25px;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 12px;
+    border: 1px solid #dee2e6;
+}
+
+.question-actions .btn {
+    margin: 8px;
+    padding: 14px 20px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.question-actions .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.question-actions .btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.question-actions .btn-secondary {
+    background: linear-gradient(135deg, #6c757d, #5a6268);
+    color: white;
+}
+
+.question-actions .btn-secondary:hover {
+    background: linear-gradient(135deg, #5a6268, #495057);
+}
+
+.form-actions {
+    padding: 30px;
+    background: #f8f9fa;
+    text-align: center;
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn {
+    display: inline-block;
+    padding: 12px 24px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    text-align: center;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2980b9;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+.btn-outline {
+    background: transparent;
+    color: #7f8c8d;
+    border: 2px solid #bdc3c7;
+}
+
+.btn-outline:hover {
+    background: #bdc3c7;
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .question-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        padding: 20px;
+    }
+    
+    .question-actions .btn {
+        margin: 0;
+        padding: 12px 16px;
+        font-size: 0.9rem;
+    }
+    
+    .true-false-options {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .option-item {
+        flex-direction: column;
+        gap: 8px;
+        padding: 15px;
+    }
+    
+    .option-item input[type="text"] {
+        min-width: auto;
+        width: 100%;
+    }
+    
+    .question-content,
+    .question-options,
+    .question-score {
+        padding: 15px;
+    }
+    
+    .question-content textarea {
+        min-height: 80px;
+        padding: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .question-actions {
+        grid-template-columns: 1fr;
+    }
+    
+    .true-false-options .option-item {
+        padding: 15px 20px;
+    }
+    
+    .option-symbol {
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+    }
+    
+    .option-text {
+        font-size: 15px;
+    }
+}
+</style>
+
+<script>
+let questionCount = 0;
+
+function addQuestion(type) {
+    questionCount++;
+    const container = document.getElementById('questions-container');
+    const questionDiv = document.createElement('div');
+    questionDiv.className = 'question-item';
+    questionDiv.id = `question-${questionCount}`;
+    
+    let typeText = '';
+    let optionsHtml = '';
+    
+    switch(type) {
+        case 'single_choice':
+            typeText = '单选题';
+            optionsHtml = `
+                <div class="question-options">
+                    <label>选项设置：</label>
+                    <div id="options-${questionCount}">
+                        <div class="option-item">
+                            <input type="radio" name="correct_answer_${questionCount}" value="A">
+                            <span>A.</span>
+                            <input type="text" name="option_A_${questionCount}" placeholder="选项A内容" required>
+                            <button type="button" class="option-remove" onclick="removeOption(this)">删除</button>
+                        </div>
+                        <div class="option-item">
+                            <input type="radio" name="correct_answer_${questionCount}" value="B">
+                            <span>B.</span>
+                            <input type="text" name="option_B_${questionCount}" placeholder="选项B内容" required>
+                            <button type="button" class="option-remove" onclick="removeOption(this)">删除</button>
+                        </div>
+                    </div>
+                    <button type="button" class="add-option" onclick="addOption(${questionCount}, 'single')">添加选项</button>
+                </div>`;
+            break;
+        case 'multiple_choice':
+            typeText = '多选题';
+            optionsHtml = `
+                <div class="question-options">
+                    <label>选项设置：</label>
+                    <div id="options-${questionCount}">
+                        <div class="option-item">
+                            <input type="checkbox" name="correct_answer_${questionCount}" value="A">
+                            <span>A.</span>
+                            <input type="text" name="option_A_${questionCount}" placeholder="选项A内容" required>
+                            <button type="button" class="option-remove" onclick="removeOption(this)">删除</button>
+                        </div>
+                        <div class="option-item">
+                            <input type="checkbox" name="correct_answer_${questionCount}" value="B">
+                            <span>B.</span>
+                            <input type="text" name="option_B_${questionCount}" placeholder="选项B内容" required>
+                            <button type="button" class="option-remove" onclick="removeOption(this)">删除</button>
+                        </div>
+                    </div>
+                    <button type="button" class="add-option" onclick="addOption(${questionCount}, 'multiple')">添加选项</button>
+                </div>`;
+            break;
+        case 'fill_blank':
+            typeText = '填空题';
+            optionsHtml = `
+                <div class="question-options">
+                    <label for="correct_answer_${questionCount}">参考答案：</label>
+                    <textarea name="correct_answer_${questionCount}" class="answer-textarea" placeholder="请输入参考答案，多个答案用分号分隔" rows="2"></textarea>
+                </div>`;
+            break;
+        case 'short_answer':
+            typeText = '简答题';
+            optionsHtml = `
+                <div class="question-options">
+                    <label for="correct_answer_${questionCount}">参考答案：</label>
+                    <textarea name="correct_answer_${questionCount}" class="answer-textarea" placeholder="请输入参考答案或评分要点" rows="4"></textarea>
+                </div>`;
+            break;
+        case 'true_false':
+            typeText = '判断题';
+            optionsHtml = `
+                <div class="question-options">
+                    <label>选项设置：</label>
+                    <div id="options-${questionCount}" class="true-false-options">
+                        <div class="option-item">
+                            <input type="radio" name="correct_answer_${questionCount}" value="true" id="true_${questionCount}">
+                            <label for="true_${questionCount}">
+                                <span class="option-symbol correct">✓</span>
+                                <span class="option-text">正确</span>
+                            </label>
+                        </div>
+                        <div class="option-item">
+                            <input type="radio" name="correct_answer_${questionCount}" value="false" id="false_${questionCount}">
+                            <label for="false_${questionCount}">
+                                <span class="option-symbol incorrect">✗</span>
+                                <span class="option-text">错误</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="true-false-note">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i>
+                            请选择正确答案。判断题只有"正确"和"错误"两个互斥选项。
+                        </small>
+                    </div>
+                </div>`;
+            break;
+    }
+    
+    questionDiv.innerHTML = `
+        <div class="question-header">
+            <span class="question-type">${typeText}</span>
+            <button type="button" class="question-remove" onclick="removeQuestion(${questionCount})">删除题目</button>
+        </div>
+        <input type="hidden" name="question_type_${questionCount}" value="${type}">
+        <div class="question-content">
+            <label for="question_content_${questionCount}">题目内容：</label>
+            <textarea name="question_content_${questionCount}" placeholder="请输入题目内容" required></textarea>
+        </div>
+        ${optionsHtml}
+        <div class="question-score">
+            <label for="question_score_${questionCount}">分值：</label>
+            <input type="number" name="question_score_${questionCount}" value="10" min="1" max="100">
+            <span>分</span>
+        </div>
+    `;
+    
+    container.appendChild(questionDiv);
+    updateTotalScore();
+}
+
+function removeQuestion(questionId) {
+    const questionDiv = document.getElementById(`question-${questionId}`);
+    if (questionDiv) {
+        questionDiv.remove();
+        updateTotalScore();
+    }
+}
+
+function addOption(questionId, type) {
+    const optionsContainer = document.getElementById(`options-${questionId}`);
+    const optionCount = optionsContainer.children.length;
+    const optionLetter = String.fromCharCode(65 + optionCount); // A, B, C, D...
+    
+    const optionDiv = document.createElement('div');
+    optionDiv.className = 'option-item';
+    
+    const inputType = type === 'single' ? 'radio' : 'checkbox';
+    optionDiv.innerHTML = `
+        <input type="${inputType}" name="correct_answer_${questionId}" value="${optionLetter}">
+        <span>${optionLetter}.</span>
+        <input type="text" name="option_${optionLetter}_${questionId}" placeholder="选项${optionLetter}内容" required>
+        <button type="button" class="option-remove" onclick="removeOption(this)">删除</button>
+    `;
+    
+    optionsContainer.appendChild(optionDiv);
+}
+
+function removeOption(button) {
+    const optionItem = button.parentElement;
+    const optionsContainer = optionItem.parentElement;
+    
+    // 至少保留两个选项
+    if (optionsContainer.children.length > 2) {
+        optionItem.remove();
+        // 重新编号选项
+        renumberOptions(optionsContainer);
+    } else {
+        alert('至少需要保留两个选项');
+    }
+}
+
+function renumberOptions(optionsContainer) {
+    const options = optionsContainer.children;
+    for (let i = 0; i < options.length; i++) {
+        const letter = String.fromCharCode(65 + i);
+        const option = options[i];
+        
+        // 更新选项标签
+        option.querySelector('span').textContent = letter + '.';
+        
+        // 更新input的name和value
+        const radioOrCheckbox = option.querySelector('input[type="radio"], input[type="checkbox"]');
+        const textInput = option.querySelector('input[type="text"]');
+        
+        if (radioOrCheckbox) {
+            radioOrCheckbox.value = letter;
+        }
+        
+        if (textInput) {
+            const nameMatch = textInput.name.match(/option_[A-Z]_(\d+)/);
+            if (nameMatch) {
+                textInput.name = `option_${letter}_${nameMatch[1]}`;
+                textInput.placeholder = `选项${letter}内容`;
+            }
+        }
+    }
+}
+
+function updateTotalScore() {
+    const scoreInputs = document.querySelectorAll('input[name^="question_score_"]');
+    let total = 0;
+    scoreInputs.forEach(input => {
+        total += parseInt(input.value) || 0;
+    });
+    document.getElementById('total_score').value = total;
+}
+
+// 监听分值变化
+document.addEventListener('input', function(e) {
+    if (e.target.name && e.target.name.startsWith('question_score_')) {
+        updateTotalScore();
+    }
+});
+
+// 设置默认时间
+document.addEventListener('DOMContentLoaded', function() {
+    const now = new Date();
+    const publishTime = new Date(now.getTime() + 60 * 60 * 1000); // 1小时后
+    const dueTime = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7天后
+    
+    document.getElementById('publish_time').value = publishTime.toISOString().slice(0, 16);
+    document.getElementById('due_time').value = dueTime.toISOString().slice(0, 16);
+});
+
+// 表单提交验证
+document.getElementById('assignmentForm').addEventListener('submit', function(e) {
+    const questionsContainer = document.getElementById('questions-container');
+    if (questionsContainer.children.length === 0) {
+        e.preventDefault();
+        alert('请至少添加一道题目');
+        return false;
+    }
+    
+    // 验证发布时间和截止时间
+    const publishTime = new Date(document.getElementById('publish_time').value);
+    const dueTime = new Date(document.getElementById('due_time').value);
+    
+    if (dueTime <= publishTime) {
+        e.preventDefault();
+        alert('截止时间必须晚于发布时间');
+        return false;
+    }
+});
+</script>
+{% endblock %}
