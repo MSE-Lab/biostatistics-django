@@ -1,0 +1,223 @@
+{% extends 'simulators/base.html' %}
+{% load static %}
+
+{% block title %}单样本比例检验模拟器{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/simulators.css' %}">
+<style>
+    .simulator-container {
+        width: 100%;
+        margin: 0;
+        padding: 15px;
+        min-height: 100vh;
+    }
+    
+    .control-panel {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .visualization-area {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        min-height: 400px;
+    }
+    
+    .results-panel {
+        background: #e8f4fd;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 5px;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 5px;
+        border: 1px solid #ced4da;
+        padding: 8px 12px;
+    }
+    
+    .btn {
+        border-radius: 5px;
+        padding: 8px 16px;
+        margin: 5px;
+    }
+    
+    .results-table {
+        margin-bottom: 0;
+    }
+    
+    .results-table td {
+        padding: 8px 12px;
+        border-top: 1px solid #dee2e6;
+        font-size: 0.9rem;
+    }
+    
+    .results-table td:first-child {
+        font-weight: 500;
+        color: #495057;
+        width: 40%;
+    }
+    
+    .hypothesis-steps {
+        background: #e3f2fd;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .hypothesis-steps h6 {
+        color: #1976d2;
+        margin-bottom: 15px;
+    }
+    
+    .hypothesis-steps ol {
+        margin-bottom: 0;
+        padding-left: 20px;
+    }
+    
+    .hypothesis-steps li {
+        margin-bottom: 8px;
+        color: #424242;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="simulator-container">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="text-center mb-4">
+                <i class="fas fa-chart-line me-2"></i>
+                单样本比例检验模拟器
+            </h1>
+            <p class="text-center text-muted mb-4">
+                检验样本比例是否等于某个特定值，理解二项分布的大样本近似。
+            </p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- 左侧控制面板 -->
+        <div class="col-md-4">
+            <div class="control-panel">
+                <h5 class="mb-3">
+                    <i class="fas fa-cog me-2"></i>参数设置
+                </h5>
+                
+                <div class="form-group">
+                    <label for="p0" class="form-label">假设比例 (p₀)</label>
+                    <input type="number" class="form-control" id="p0" value="0.5" min="0.01" max="0.99" step="0.01">
+                </div>
+                
+                <div class="form-group">
+                    <label for="trueP" class="form-label">真实比例 (p)</label>
+                    <input type="number" class="form-control" id="trueP" value="0.6" min="0.01" max="0.99" step="0.01">
+                </div>
+                
+                <div class="form-group">
+                    <label for="sampleSize" class="form-label">样本大小 (n)</label>
+                    <input type="number" class="form-control" id="sampleSize" value="100" min="30" max="1000" step="10">
+                </div>
+                
+                <div class="form-group">
+                    <label for="alpha" class="form-label">显著性水平 (α)</label>
+                    <select class="form-select" id="alpha">
+                        <option value="0.01">0.01</option>
+                        <option value="0.05" selected>0.05</option>
+                        <option value="0.10">0.10</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="testType" class="form-label">检验类型</label>
+                    <select class="form-select" id="testType">
+                        <option value="two-tailed" selected>双尾检验</option>
+                        <option value="left-tailed">左尾检验</option>
+                        <option value="right-tailed">右尾检验</option>
+                    </select>
+                </div>
+                
+                <!-- 假设检验步骤 -->
+                <div class="hypothesis-steps mt-4">
+                    <h6><i class="fas fa-list-ol me-2"></i>假设检验步骤</h6>
+                    <ol>
+                        <li><strong>建立假设：</strong><br>
+                            H₀: p = p₀ (比例等于假设值)<br>
+                            H₁: <span id="alternativeHypothesis">p ≠ p₀ (比例不等于假设值)</span>
+                        </li>
+                        <li><strong>选择检验统计量：</strong><br>
+                            Z = (p̂ - p₀) / √(p₀(1-p₀)/n)
+                        </li>
+                        <li><strong>确定拒绝域：</strong><br>
+                            基于显著性水平α和检验类型
+                        </li>
+                        <li><strong>计算检验统计量</strong></li>
+                        <li><strong>做出统计决策</strong></li>
+                    </ol>
+                </div>
+                
+                <!-- 操作按钮 -->
+                <div class="mt-4">
+                    <button type="button" class="btn btn-primary w-100 mb-2" id="runTest">
+                        <i class="fas fa-play me-2"></i>生成样本并执行检验
+                    </button>
+                    
+                    <button type="button" class="btn btn-warning w-100 mb-2" id="runSimulation">
+                        <i class="fas fa-redo me-2"></i>重复模拟 (1000次)
+                    </button>
+                    
+                    <button type="button" class="btn btn-secondary w-100" id="resetSimulation">
+                        <i class="fas fa-refresh me-2"></i>重置模拟
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧可视化和结果面板 -->
+        <div class="col-md-8">
+            <!-- 标准正态分布可视化 -->
+            <div class="visualization-area">
+                <h5 class="mb-3">
+                    <i class="fas fa-chart-line me-2 text-primary"></i>标准正态分布可视化
+                </h5>
+                <canvas id="distributionChart" style="max-height: 350px;"></canvas>
+            </div>
+            
+            <!-- 检验结果 -->
+            <div class="results-panel">
+                <h5 class="mb-3">
+                    <i class="fas fa-calculator me-2 text-success"></i>检验结果
+                </h5>
+                <div id="resultsContainer">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        点击"生成样本并执行检验"开始分析
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'vendor/chartjs/chart.js' %}"></script>
+<script src="{% static 'js/proportion_test_one_sample.js' %}"></script>
+{% endblock %}

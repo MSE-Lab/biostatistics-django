@@ -1,13 +1,14 @@
 {% extends 'simulators/base.html' %}
 {% load static %}
 
-{% block title %}双样本t检验模拟器{% endblock %}
+{% block title %}单样本方差卡方检验模拟器{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/simulators.css' %}">
 <style>
     .simulator-container {
-        margin: 0 auto;
+        width: 100%;
+        margin: 0;
         padding: 15px;
         min-height: 100vh;
     }
@@ -140,11 +141,11 @@
     <div class="row">
         <div class="col-12">
             <h1 class="text-center mb-4">
-                <i class="fas fa-balance-scale me-2"></i>
-                双样本t检验模拟器
+                <i class="fas fa-square-root-alt me-2"></i>
+                单样本方差卡方检验模拟器
             </h1>
             <p class="text-center text-muted mb-4">
-                比较两个独立样本均值差异的假设检验方法
+                用于检验单个总体方差是否等于假设值的假设检验方法
             </p>
         </div>
     </div>
@@ -158,66 +159,50 @@
                     参数设置
                 </h4>
                 
-                <!-- 样本参数 - 两列布局 -->
-                <div class="row mb-4">
-                    <div class="col-6">
-                        <h6 class="text-primary">样本1参数</h6>
-                        <div class="form-group">
-                            <label class="form-label">样本大小 (n₁)</label>
-                            <input type="number" id="sampleSize1" class="form-control" value="20" min="2" max="100">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">总体均值 (μ₁)</label>
-                            <input type="number" id="populationMean1" class="form-control" value="0" step="0.1">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">总体标准差 (σ₁)</label>
-                            <input type="number" id="populationStd1" class="form-control" value="1" min="0.1" step="0.1">
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <h6 class="text-success">样本2参数</h6>
-                        <div class="form-group">
-                            <label class="form-label">样本大小 (n₂)</label>
-                            <input type="number" id="sampleSize2" class="form-control" value="25" min="2" max="100">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">总体均值 (μ₂)</label>
-                            <input type="number" id="populationMean2" class="form-control" value="0" step="0.1">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">总体标准差 (σ₂)</label>
-                            <input type="number" id="populationStd2" class="form-control" value="1" min="0.1" step="0.1">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 检验参数 -->
+                <!-- 假设设定 -->
                 <div class="mb-4">
-                    <h6 class="text-warning">检验参数</h6>
+                    <h6 class="text-primary">假设设定</h6>
                     <div class="form-group">
-                        <label class="form-label">显著性水平 (α)</label>
-                        <select id="significanceLevel" class="form-control">
-                            <option value="0.01">0.01</option>
-                            <option value="0.05" selected>0.05</option>
-                            <option value="0.10">0.10</option>
-                        </select>
+                        <label class="form-label">原假设方差 (σ₀²)</label>
+                        <input type="number" id="sigma0Squared" class="form-control" value="1" min="0.1" step="0.1">
                     </div>
                     <div class="form-group">
                         <label class="form-label">检验类型</label>
                         <select id="testType" class="form-control">
-                            <option value="two-tailed" selected>双侧检验</option>
-                            <option value="right-tailed">右侧检验 (μ₁ > μ₂)</option>
-                            <option value="left-tailed">左侧检验 (μ₁ < μ₂)</option>
+                            <option value="two-tailed" selected>双侧检验 (σ² ≠ σ₀²)</option>
+                            <option value="left-tailed">左侧检验 (σ² < σ₀²)</option>
+                            <option value="right-tailed">右侧检验 (σ² > σ₀²)</option>
                         </select>
                     </div>
+                </div>
+
+                <!-- 总体参数 -->
+                <div class="mb-4">
+                    <h6 class="text-success">总体参数</h6>
                     <div class="form-group">
-                        <label class="form-label">两样本是否方差同质？</label>
-                        <select id="varianceHomogeneity" class="form-control">
-                            <option value="yes" selected>是 (等方差t检验)</option>
-                            <option value="no">否 (Welch t检验)</option>
+                        <label class="form-label">总体均值 (μ)</label>
+                        <input type="number" id="trueMu" class="form-control" value="0" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">真实方差 (σ²)</label>
+                        <input type="number" id="trueSigmaSquared" class="form-control" value="1" min="0.1" step="0.1">
+                    </div>
+                </div>
+
+                <!-- 样本设置 -->
+                <div class="mb-4">
+                    <h6 class="text-warning">样本设置</h6>
+                    <div class="form-group">
+                        <label class="form-label">样本大小 (n)</label>
+                        <input type="number" id="sampleSize" class="form-control" value="20" min="5" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">显著性水平 (α)</label>
+                        <select id="alpha" class="form-control">
+                            <option value="0.01">0.01</option>
+                            <option value="0.05" selected>0.05</option>
+                            <option value="0.10">0.10</option>
                         </select>
-                        <small class="form-text text-muted">选择"是"使用合并方差，选择"否"使用Welch修正</small>
                     </div>
                 </div>
 
@@ -225,15 +210,15 @@
                 <div class="hypothesis-steps mb-4">
                     <div class="step-title">假设检验步骤：</div>
                     <div class="step-content">
-                        <strong>1. 提出假设，H₀:</strong> μ₁ = μ₂ (两总体均值相等); 
-                        <strong>H₁:</strong> <span id="alternativeHypothesis">μ₁ ≠ μ₂ (两总体均值不等)</span><br>
+                        <strong>1. 提出假设，H₀:</strong> σ² = σ₀² (总体方差等于假设值); 
+                        <strong>H₁:</strong> <span id="alternativeHypothesis">σ² ≠ σ₀² (总体方差不等于假设值);</span><br>
                         <strong>2. 选择显著性水平;</strong><br>
-                        <strong>3. 计算检验统计量:</strong> <span id="testStatisticFormula">t = (x̄₁ - x̄₂) / SE</span>;<br>
+                        <strong>3. 计算检验统计量:</strong> χ² = (n-1)s²/σ₀² ~ χ²(n-1);<br>
                         <strong>4. 做出统计推断:</strong> <span id="decisionRule">当p < α时拒绝H₀。</span>
                     </div>
                 </div>
 
-                <button id="runTest" class="btn btn-primary w-100 mb-2">
+                <button id="runTest" class="btn btn-primary w-100 mb-3">
                     <i class="fas fa-play me-2"></i>
                     生成样本并执行检验
                 </button>
@@ -243,13 +228,15 @@
                     重复模拟 (1000次)
                 </button>
                 
-                <button id="resetSimulation" class="btn btn-outline-secondary w-100">
+                <button id="resetSimulation" class="btn btn-warning w-100">
                     <i class="fas fa-redo me-2"></i>
                     重置模拟
                 </button>
                 
                 <div class="mt-3">
-                    <small class="text-muted">状态: <span id="simulationStatus">就绪</span></small>
+                    <small class="text-muted">
+                        <strong>状态:</strong> <span id="simulationStatus">就绪</span>
+                    </small>
                 </div>
             </div>
         </div>
@@ -259,10 +246,12 @@
             <div class="visualization-area">
                 <h5 class="mb-3">
                     <i class="fas fa-chart-area me-2"></i>
-                    t分布可视化
+                    卡方分布可视化
                 </h5>
                 <canvas id="distributionChart"></canvas>
             </div>
+
+
 
             <!-- 检验结果 -->
             <div class="results-panel mt-3">
@@ -273,7 +262,7 @@
                 <div id="resultsContainer">
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>
-                        点击"生成样本并执行检验"开始分析
+                        点击"生成样本并运行检验"开始分析
                     </div>
                 </div>
             </div>
@@ -284,10 +273,10 @@
 
 {% block extra_js %}
 <script src="{% static 'vendor/chartjs/chart.js' %}"></script>
-<script src="{% static 'js/t_test_two_sample.js' %}"></script>
+<script src="{% static 'js/chi_square_variance_test.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    window.tTestSimulator = new TTestTwoSampleSimulator();
+    const simulator = new ChiSquareVarianceTestSimulator();
 });
 </script>
 {% endblock %}

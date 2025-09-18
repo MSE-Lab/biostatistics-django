@@ -1,7 +1,7 @@
 {% extends 'simulators/base.html' %}
 {% load static %}
 
-{% block title %}双样本t检验模拟器{% endblock %}
+{% block title %}双样本F检验模拟器{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/simulators.css' %}">
@@ -140,11 +140,11 @@
     <div class="row">
         <div class="col-12">
             <h1 class="text-center mb-4">
-                <i class="fas fa-balance-scale me-2"></i>
-                双样本t检验模拟器
+                <i class="fas fa-chart-line me-2"></i>
+                双样本F检验模拟器
             </h1>
             <p class="text-center text-muted mb-4">
-                比较两个独立样本均值差异的假设检验方法
+                用于检验两个总体方差是否相等的假设检验方法
             </p>
         </div>
     </div>
@@ -167,12 +167,8 @@
                             <input type="number" id="sampleSize1" class="form-control" value="20" min="2" max="100">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">总体均值 (μ₁)</label>
-                            <input type="number" id="populationMean1" class="form-control" value="0" step="0.1">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">总体标准差 (σ₁)</label>
-                            <input type="number" id="populationStd1" class="form-control" value="1" min="0.1" step="0.1">
+                            <label class="form-label">总体方差 (σ₁²)</label>
+                            <input type="number" id="populationVar1" class="form-control" value="4" min="0.1" max="100" step="0.1">
                         </div>
                     </div>
                     <div class="col-6">
@@ -182,12 +178,8 @@
                             <input type="number" id="sampleSize2" class="form-control" value="25" min="2" max="100">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">总体均值 (μ₂)</label>
-                            <input type="number" id="populationMean2" class="form-control" value="0" step="0.1">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">总体标准差 (σ₂)</label>
-                            <input type="number" id="populationStd2" class="form-control" value="1" min="0.1" step="0.1">
+                            <label class="form-label">总体方差 (σ₂²)</label>
+                            <input type="number" id="populationVar2" class="form-control" value="4" min="0.1" max="100" step="0.1">
                         </div>
                     </div>
                 </div>
@@ -207,17 +199,9 @@
                         <label class="form-label">检验类型</label>
                         <select id="testType" class="form-control">
                             <option value="two-tailed" selected>双侧检验</option>
-                            <option value="right-tailed">右侧检验 (μ₁ > μ₂)</option>
-                            <option value="left-tailed">左侧检验 (μ₁ < μ₂)</option>
+                            <option value="right-tailed">右侧检验 (σ₁² > σ₂²)</option>
+                            <option value="left-tailed">左侧检验 (σ₁² < σ₂²)</option>
                         </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">两样本是否方差同质？</label>
-                        <select id="varianceHomogeneity" class="form-control">
-                            <option value="yes" selected>是 (等方差t检验)</option>
-                            <option value="no">否 (Welch t检验)</option>
-                        </select>
-                        <small class="form-text text-muted">选择"是"使用合并方差，选择"否"使用Welch修正</small>
                     </div>
                 </div>
 
@@ -225,10 +209,10 @@
                 <div class="hypothesis-steps mb-4">
                     <div class="step-title">假设检验步骤：</div>
                     <div class="step-content">
-                        <strong>1. 提出假设，H₀:</strong> μ₁ = μ₂ (两总体均值相等); 
-                        <strong>H₁:</strong> <span id="alternativeHypothesis">μ₁ ≠ μ₂ (两总体均值不等)</span><br>
+                        <strong>1. 提出假设，H₀:</strong> σ₁² = σ₂² (两总体方差相等); 
+                        <strong>H₁:</strong> <span id="alternativeHypothesis">σ₁² ≠ σ₂² (两总体方差不等)</span><br>
                         <strong>2. 选择显著性水平;</strong><br>
-                        <strong>3. 计算检验统计量:</strong> <span id="testStatisticFormula">t = (x̄₁ - x̄₂) / SE</span>;<br>
+                        <strong>3. 计算检验统计量:</strong> F = s₁²/s₂² ~ F(n₁-1, n₂-1);<br>
                         <strong>4. 做出统计推断:</strong> <span id="decisionRule">当p < α时拒绝H₀。</span>
                     </div>
                 </div>
@@ -259,7 +243,7 @@
             <div class="visualization-area">
                 <h5 class="mb-3">
                     <i class="fas fa-chart-area me-2"></i>
-                    t分布可视化
+                    F分布可视化
                 </h5>
                 <canvas id="distributionChart"></canvas>
             </div>
@@ -284,10 +268,10 @@
 
 {% block extra_js %}
 <script src="{% static 'vendor/chartjs/chart.js' %}"></script>
-<script src="{% static 'js/t_test_two_sample.js' %}"></script>
+<script src="{% static 'js/f_test_two_sample.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    window.tTestSimulator = new TTestTwoSampleSimulator();
+    const simulator = new FTestTwoSampleSimulator();
 });
 </script>
 {% endblock %}

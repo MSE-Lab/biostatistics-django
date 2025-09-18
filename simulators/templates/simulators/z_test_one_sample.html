@@ -1,12 +1,177 @@
 {% extends 'simulators/base.html' %}
+{% load static %}
 
 {% block title %}单样本z检验模拟器{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/simulators.css' %}">
+<style>
+    .simulator-container {
+        width: 100%;
+        margin: 0;
+        padding: 15px;
+        min-height: 100vh;
+    }
+    
+    .control-panel {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .visualization-area {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        min-height: 400px;
+    }
+    
+    .results-panel {
+        background: #e8f4fd;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 5px;
+    }
+    
+    .form-control {
+        border-radius: 5px;
+        border: 1px solid #ced4da;
+        padding: 8px 12px;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 25px;
+        padding: 10px 30px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .btn-success {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+        border-radius: 25px;
+        padding: 10px 30px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .btn-warning {
+        background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+        border: none;
+        border-radius: 25px;
+        padding: 10px 30px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-warning:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .results-table {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .results-table th {
+        background: #495057;
+        color: white;
+        font-weight: 600;
+        padding: 12px;
+        text-align: center;
+    }
+    
+    .results-table td {
+        padding: 10px 12px;
+        text-align: center;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .hypothesis-steps {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        margin: 15px 0;
+        border-radius: 0 5px 5px 0;
+    }
+    
+    .step-title {
+        font-weight: 600;
+        color: #856404;
+        margin-bottom: 8px;
+    }
+    
+    .step-content {
+        color: #664d03;
+        line-height: 1.5;
+    }
+    
+    #distributionChart {
+        width: 100%;
+        height: 350px;
+    }
+    
+    .alert {
+        border-radius: 8px;
+        border: none;
+        padding: 12px 16px;
+        margin: 10px 0;
+    }
+    
+    .alert-info {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .alert-danger {
+        background: #f8d7da;
+        color: #721c24;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
+<div class="simulator-container">
     <div class="row">
         <div class="col-12">
-            <h1 class="text-center mb-4">单样本z检验模拟器</h1>
+            <h1 class="text-center mb-4">
+                <i class="fas fa-chart-bar me-2"></i>
+                单样本z检验模拟器
+            </h1>
             <p class="text-center text-muted mb-4">
                 学习单样本z检验的基本原理，理解检验统计量、p值和临界区域的概念
             </p>
@@ -14,205 +179,130 @@
     </div>
 
     <div class="row">
-        <!-- 左侧参数设置区 -->
-        <div class="col-lg-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">参数设置</h5>
+        <!-- 控制面板 -->
+        <div class="col-md-4">
+            <div class="control-panel">
+                <h4 class="mb-3">
+                    <i class="fas fa-sliders-h me-2"></i>
+                    参数设置
+                </h4>
+                
+                <!-- 假设设定 -->
+                <div class="mb-4">
+                    <h6 class="text-primary">假设设定</h6>
+                    <div class="form-group">
+                        <label class="form-label">原假设均值 (μ₀)</label>
+                        <input type="number" id="mu0" class="form-control" value="0" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">检验类型</label>
+                        <select id="testType" class="form-control">
+                            <option value="two-tailed" selected>双侧检验 (μ ≠ μ₀)</option>
+                            <option value="left-tailed">左侧检验 (μ < μ₀)</option>
+                            <option value="right-tailed">右侧检验 (μ > μ₀)</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <!-- 假设设定 -->
-                    <div class="mb-4">
-                        <h6 class="text-primary">假设设定</h6>
-                        <div class="mb-3">
-                            <label for="mu0" class="form-label">原假设均值 μ₀</label>
-                            <input type="number" class="form-control" id="mu0" value="0" step="0.1">
-                            <small class="form-text text-muted">H₀: μ = μ₀</small>
-                        </div>
-                        <div class="mb-3">
-                            <label for="testType" class="form-label">检验类型</label>
-                            <select class="form-select" id="testType">
-                                <option value="two-tailed">双侧检验 (μ ≠ μ₀)</option>
-                                <option value="left-tailed">左侧检验 (μ < μ₀)</option>
-                                <option value="right-tailed">右侧检验 (μ > μ₀)</option>
-                            </select>
-                        </div>
-                    </div>
 
-                    <!-- 总体参数 -->
-                    <div class="mb-4">
-                        <h6 class="text-success">总体参数</h6>
-                        <div class="mb-3">
-                            <label for="sigma" class="form-label">总体标准差 σ</label>
-                            <input type="number" class="form-control" id="sigma" value="1" min="0.1" step="0.1">
-                            <small class="form-text text-muted">已知总体标准差</small>
-                        </div>
-                        <div class="mb-3">
-                            <label for="trueMu" class="form-label">真实总体均值 μ</label>
-                            <input type="number" class="form-control" id="trueMu" value="0" step="0.1">
-                            <small class="form-text text-muted">用于生成样本的真实均值</small>
-                        </div>
+                <!-- 总体参数 -->
+                <div class="mb-4">
+                    <h6 class="text-success">总体参数</h6>
+                    <div class="form-group">
+                        <label class="form-label">总体标准差 (σ)</label>
+                        <input type="number" id="sigma" class="form-control" value="1" min="0.1" step="0.1">
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">真实总体均值 (μ)</label>
+                        <input type="number" id="trueMu" class="form-control" value="0" step="0.1">
+                    </div>
+                </div>
 
-                    <!-- 样本设置 -->
-                    <div class="mb-4">
-                        <h6 class="text-warning">样本设置</h6>
-                        <div class="mb-3">
-                            <label for="sampleSize" class="form-label">样本量 n: <span id="sampleSizeValue">30</span></label>
-                            <input type="range" class="form-range" id="sampleSize" min="5" max="200" value="30">
-                        </div>
-                        <div class="mb-3">
-                            <label for="alpha" class="form-label">显著性水平 α</label>
-                            <select class="form-select" id="alpha">
-                                <option value="0.01">0.01</option>
-                                <option value="0.05" selected>0.05</option>
-                                <option value="0.10">0.10</option>
-                            </select>
-                        </div>
+                <!-- 样本设置 -->
+                <div class="mb-4">
+                    <h6 class="text-warning">样本设置</h6>
+                    <div class="form-group">
+                        <label class="form-label">样本大小 (n)</label>
+                        <input type="number" id="sampleSize" class="form-control" value="30" min="5" max="200">
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">显著性水平 (α)</label>
+                        <select id="alpha" class="form-control">
+                            <option value="0.01">0.01</option>
+                            <option value="0.05" selected>0.05</option>
+                            <option value="0.10">0.10</option>
+                        </select>
+                    </div>
+                </div>
 
-                    <!-- 控制按钮 -->
-                    <div class="d-grid gap-2">
-                        <button type="button" class="btn btn-primary" id="generateSample">
-                            <i class="fas fa-dice"></i> 生成样本并检验
-                        </button>
-                        <button type="button" class="btn btn-success" id="runSimulation">
-                            <i class="fas fa-play"></i> 重复模拟 (1000次)
-                        </button>
-                        <button type="button" class="btn btn-secondary" id="resetSimulation">
-                            <i class="fas fa-undo"></i> 重置
-                        </button>
+                <!-- 假设检验步骤 -->
+                <div class="hypothesis-steps mb-4">
+                    <div class="step-title">假设检验步骤：</div>
+                    <div class="step-content">
+                        <strong>1. 提出假设，H₀:</strong> μ = μ₀ (总体均值等于假设值); 
+                        <strong>H₁:</strong> <span id="alternativeHypothesis">μ ≠ μ₀ (总体均值不等于假设值);</span><br>
+                        <strong>2. 选择显著性水平;</strong><br>
+                        <strong>3. 计算检验统计量:</strong> z = (x̄ - μ₀)/(σ/√n) ~ N(0,1);<br>
+                        <strong>4. 做出统计推断:</strong> <span id="decisionRule">当p < α时拒绝H₀。</span>
                     </div>
+                </div>
+
+                <button id="runTest" class="btn btn-primary w-100 mb-3">
+                    <i class="fas fa-play me-2"></i>
+                    生成样本并执行检验
+                </button>
+                
+                <button id="runSimulation" class="btn btn-success w-100 mb-2">
+                    <i class="fas fa-chart-line me-2"></i>
+                    重复模拟 (1000次)
+                </button>
+                
+                <button id="resetSimulation" class="btn btn-warning w-100">
+                    <i class="fas fa-redo me-2"></i>
+                    重置模拟
+                </button>
+                
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <strong>状态:</strong> <span id="simulationStatus">就绪</span>
+                    </small>
                 </div>
             </div>
         </div>
 
-        <!-- 右侧可视化区 -->
-        <div class="col-lg-8">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">检验可视化</h5>
-                </div>
-                <div class="card-body">
-                    <!-- 分布图 -->
-                    <div class="mb-4">
-                        <canvas id="distributionChart" width="800" height="400"></canvas>
-                    </div>
-                    
-                    <!-- 检验步骤说明 -->
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <h6 class="card-title text-primary">检验步骤</h6>
-                                    <ol class="mb-0 small">
-                                        <li>建立假设：H₀ vs H₁</li>
-                                        <li>选择显著性水平</li>
-                                        <li>计算检验统计量：z = (x̄ - μ₀)/(σ/√n)</li>
-                                        <li>做出统计决策</li>
-                                    </ol>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <h6 class="card-title text-success">当前假设</h6>
-                                    <div id="hypothesisDisplay" class="small">
-                                        <div><strong>H₀:</strong> μ = <span id="h0Value">0</span></div>
-                                        <div><strong>H₁:</strong> <span id="h1Value">μ ≠ 0</span></div>
-                                        <div><strong>α:</strong> <span id="alphaValue">0.05</span></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <!-- 可视化区域 -->
+        <div class="col-md-8">
+            <div class="visualization-area">
+                <h5 class="mb-3">
+                    <i class="fas fa-chart-area me-2"></i>
+                    标准正态分布可视化
+                </h5>
+                <canvas id="distributionChart"></canvas>
             </div>
 
-            <!-- 检验结果区 -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">检验结果</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <!-- 单次检验结果 -->
-                        <div class="col-lg-6">
-                            <h6 class="text-primary">当前检验结果</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <tbody>
-                                        <tr>
-                                            <td><strong>样本均值 (x̄)</strong></td>
-                                            <td id="sampleMean">-</td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>检验统计量 (z)</strong></td>
-                                            <td id="testStatistic">-</td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>p值</strong></td>
-                                            <td id="pValue">-</td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>临界值</strong></td>
-                                            <td id="criticalValue">-</td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>检验结论</strong></td>
-                                            <td id="testConclusion">-</td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>95% 置信区间</strong></td>
-                                            <td id="confidenceInterval">-</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- 模拟统计结果 -->
-                        <div class="col-lg-6">
-                            <h6 class="text-success">模拟统计 (1000次)</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <tbody>
-                                        <tr>
-                                            <td><strong>拒绝H₀次数</strong></td>
-                                            <td id="rejectionCount">-</td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>拒绝率</strong></td>
-                                            <td id="rejectionRate">-</td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>第二类错误率</strong></td>
-                                            <td id="typeIIError">-</td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>检验功效</strong></td>
-                                            <td id="power">-</td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>平均p值</strong></td>
-                                            <td id="avgPValue">-</td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>模拟状态</strong></td>
-                                            <td id="simulationStatus">未开始</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+            <!-- 检验结果 -->
+            <div class="results-panel mt-3">
+                <h5 class="mb-3">
+                    <i class="fas fa-calculator me-2"></i>
+                    检验结果
+                </h5>
+                <div id="resultsContainer">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        点击"生成样本并执行检验"开始分析
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
-{% load static %}
+{% block extra_js %}
+<script src="{% static 'vendor/chartjs/chart.js' %}"></script>
 <script src="{% static 'js/z_test_one_sample.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const simulator = new ZTestOneSampleSimulator();
+});
+</script>
 {% endblock %}

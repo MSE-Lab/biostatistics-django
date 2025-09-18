@@ -19,18 +19,10 @@ class TTestOneSampleSimulator {
         document.getElementById('trueMu').addEventListener('input', () => this.updateDisplay());
         document.getElementById('trueSigma').addEventListener('input', () => this.updateDisplay());
         document.getElementById('alpha').addEventListener('change', () => this.updateDisplay());
-        
-        // 样本量滑块
-        document.getElementById('sampleSize').addEventListener('input', (e) => {
-            const n = parseInt(e.target.value);
-            const df = n - 1;
-            document.getElementById('sampleSizeValue').textContent = n;
-            document.getElementById('dfValue').textContent = df;
-            this.updateDisplay();
-        });
+        document.getElementById('sampleSize').addEventListener('input', () => this.updateDisplay());
 
         // 按钮事件
-        document.getElementById('generateSample').addEventListener('click', () => this.generateSampleAndTest());
+        document.getElementById('runTest').addEventListener('click', () => this.generateSampleAndTest());
         document.getElementById('runSimulation').addEventListener('click', () => this.runSimulation());
         document.getElementById('resetSimulation').addEventListener('click', () => this.resetSimulation());
     }
@@ -40,26 +32,21 @@ class TTestOneSampleSimulator {
         const testType = document.getElementById('testType').value;
         const alpha = parseFloat(document.getElementById('alpha').value);
         const n = parseInt(document.getElementById('sampleSize').value);
-        const df = n - 1;
 
-        // 更新假设显示
-        document.getElementById('h0Value').textContent = mu0;
-        document.getElementById('alphaValue').textContent = alpha;
-        document.getElementById('dfDisplay').textContent = df;
-        
-        let h1Text = '';
+        // 更新假设检验步骤中的备择假设
+        let alternativeText = '';
         switch(testType) {
             case 'two-tailed':
-                h1Text = `μ ≠ ${mu0}`;
+                alternativeText = 'μ ≠ μ₀ (总体均值不等于假设值)';
                 break;
             case 'left-tailed':
-                h1Text = `μ < ${mu0}`;
+                alternativeText = 'μ < μ₀ (总体均值小于假设值)';
                 break;
             case 'right-tailed':
-                h1Text = `μ > ${mu0}`;
+                alternativeText = 'μ > μ₀ (总体均值大于假设值)';
                 break;
         }
-        document.getElementById('h1Value').textContent = h1Text;
+        document.getElementById('alternativeHypothesis').textContent = alternativeText;
 
         // 更新图表
         this.updateChart();
@@ -71,7 +58,6 @@ class TTestOneSampleSimulator {
         this.chart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: [],
                 datasets: [{
                     label: 't分布',
                     data: [],
@@ -126,7 +112,33 @@ class TTestOneSampleSimulator {
                         }
                     }
                 }
-            }
+            },
+            plugins: [{
+                id: 'testStatisticLine',
+                afterDraw: (chart) => {
+                    if (chart.testStatisticPosition !== undefined && chart.testResults) {
+                        const ctx = chart.ctx;
+                        const tValue = chart.testStatisticPosition;
+                        const xPosition = chart.scales.x.getPixelForValue(tValue);
+                        const yValue = chart.testResults.tDistributionPDF(tValue, chart.testResults.df);
+                        const yPosition = chart.scales.y.getPixelForValue(yValue);
+                        
+                        // 绘制黄色垂直线
+                        ctx.strokeStyle = '#ffc107';
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.moveTo(xPosition, chart.scales.y.top);
+                        ctx.lineTo(xPosition, chart.scales.y.bottom);
+                        ctx.stroke();
+                        
+                        // 添加文本标签
+                        ctx.fillStyle = '#495057';
+                        ctx.font = '12px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(`t = ${tValue.toFixed(3)}`, xPosition, yPosition - 15);
+                    }
+                }
+            }]
         });
 
         this.updateChart();
@@ -141,34 +153,29 @@ class TTestOneSampleSimulator {
         const df = n - 1;
 
         // 生成t分布数据
-        const xValues = [];
-        const yValues = [];
+        const dataPoints = [];
+        const rejectionPoints = [];
 
         for (let x = -4; x <= 4; x += 0.05) {
-            xValues.push(x);
-            yValues.push(this.tDistributionPDF(x, df));
+            const y = this.tDistributionPDF(x, df);
+            dataPoints.push({x: x, y: y});
+            
+            // 生成拒绝域数据
+            const inRejectionRegion = this.isInRejectionRegion(x, alpha, testType, df);
+            rejectionPoints.push(inRejectionRegion ? {x: x, y: y} : {x: x, y: null});
         }
 
-        // 生成拒绝域数据
-        const rejectionData = this.generateRejectionRegionData(alpha, testType, df);
-
         // 更新图表数据
-        this.chart.data.labels = xValues;
-        this.chart.data.datasets[0].data = yValues;
-        this.chart.data.datasets[1].data = rejectionData;
+        this.chart.data.datasets[0].data = dataPoints;
+        this.chart.data.datasets[1].data = rejectionPoints;
 
         // 更新图表标题
         this.chart.data.datasets[0].label = `t分布 (df=${df})`;
 
-        // 更新临界值显示
-        this.updateCriticalValueDisplay();
-
         this.chart.update('none');
     }
 
-    generateRejectionRegionData(alpha, testType, df) {
-        const rejectionData = [];
-        
+    isInRejectionRegion(x, alpha, testType, df) {
         // 获取临界值
         let leftCritical = null;
         let rightCritical = null;
@@ -187,48 +194,19 @@ class TTestOneSampleSimulator {
                 break;
         }
 
-        // 为每个x值生成对应的y值（如果在拒绝域内）
-        for (let x = -4; x <= 4; x += 0.05) {
-            let inRejectionRegion = false;
-            
-            if (testType === 'two-tailed') {
-                inRejectionRegion = x <= leftCritical || x >= rightCritical;
-            } else if (testType === 'left-tailed') {
-                inRejectionRegion = x <= leftCritical;
-            } else if (testType === 'right-tailed') {
-                inRejectionRegion = x >= rightCritical;
-            }
-            
-            rejectionData.push(inRejectionRegion ? this.tDistributionPDF(x, df) : null);
-        }
-
-        return rejectionData;
-    }
-
-    updateCriticalValueDisplay() {
-        const alpha = parseFloat(document.getElementById('alpha').value);
-        const testType = document.getElementById('testType').value;
-        const n = parseInt(document.getElementById('sampleSize').value);
-        const df = n - 1;
-
-        let criticalText = '';
-        switch(testType) {
-            case 'two-tailed':
-                const criticalValue = this.getTCriticalValue(alpha / 2, df);
-                criticalText = `±${criticalValue.toFixed(3)}`;
-                break;
-            case 'left-tailed':
-                const leftCritical = this.getTCriticalValue(alpha, df, true);
-                criticalText = leftCritical.toFixed(3);
-                break;
-            case 'right-tailed':
-                const rightCritical = this.getTCriticalValue(alpha, df);
-                criticalText = rightCritical.toFixed(3);
-                break;
+        // 判断是否在拒绝域内
+        if (testType === 'two-tailed') {
+            return x <= leftCritical || x >= rightCritical;
+        } else if (testType === 'left-tailed') {
+            return x <= leftCritical;
+        } else if (testType === 'right-tailed') {
+            return x >= rightCritical;
         }
         
-        document.getElementById('criticalValue').textContent = criticalText;
+        return false;
     }
+
+
 
     generateSampleAndTest() {
         const mu0 = parseFloat(document.getElementById('mu0').value);
@@ -257,67 +235,116 @@ class TTestOneSampleSimulator {
         // 做出检验决策
         const reject = pValue < alpha;
 
+        // 计算临界值
+        let criticalValue;
+        switch(testType) {
+            case 'two-tailed':
+                criticalValue = this.getTCriticalValue(alpha / 2, df);
+                break;
+            case 'left-tailed':
+                criticalValue = this.getTCriticalValue(alpha, df, true);
+                break;
+            case 'right-tailed':
+                criticalValue = this.getTCriticalValue(alpha, df);
+                break;
+        }
+
+        // 在图表上标记检验统计量
+        this.markTestStatisticOnChart(tStatistic, df);
+
+        // 显示结果
+        this.displayResults({
+            sampleMean,
+            sampleStd,
+            tStatistic,
+            df,
+            pValue,
+            criticalValue,
+            reject,
+            testType,
+            alpha,
+            standardError
+        });
+    }
+
+    markTestStatisticOnChart(tStatistic, df) {
+        if (!this.chart) return;
+
+        // 设置图表的检验统计量位置和相关信息
+        this.chart.testStatisticPosition = tStatistic;
+        this.chart.testResults = {
+            tDistributionPDF: (x, df) => this.tDistributionPDF(x, df),
+            df: df
+        };
+
+        this.chart.update('none');
+    }
+
+    displayResults(results) {
+        const {
+            sampleMean, sampleStd, tStatistic, df, pValue, 
+            criticalValue, reject, testType, alpha, standardError
+        } = results;
+
         // 计算置信区间
         const criticalValueForCI = this.getTCriticalValue(0.025, df); // 95% 置信区间
         const marginOfError = criticalValueForCI * standardError;
         const ciLower = sampleMean - marginOfError;
         const ciUpper = sampleMean + marginOfError;
 
-        // 更新显示
-        document.getElementById('sampleMean').textContent = sampleMean.toFixed(4);
-        document.getElementById('sampleStd').textContent = sampleStd.toFixed(4);
-        document.getElementById('testStatistic').textContent = tStatistic.toFixed(4);
-        document.getElementById('degreesOfFreedom').textContent = df;
-        document.getElementById('pValue').textContent = pValue.toFixed(4);
-        document.getElementById('testConclusion').innerHTML = reject ? 
-            '<span class="text-danger">拒绝H₀</span>' : 
-            '<span class="text-success">接受H₀</span>';
-        document.getElementById('confidenceInterval').textContent = 
-            `[${ciLower.toFixed(4)}, ${ciUpper.toFixed(4)}]`;
-
-        // 在图表上标记检验统计量
-        this.markTestStatisticOnChart(tStatistic, df);
-    }
-
-    markTestStatisticOnChart(tStatistic, df) {
-        if (!this.chart) return;
-
-        // 移除之前的标记
-        this.chart.data.datasets = this.chart.data.datasets.filter(dataset => 
-            dataset.label !== '检验统计量' && dataset.label !== '检验统计量线');
-
-        // 添加检验统计量标记
-        if (tStatistic >= -4 && tStatistic <= 4) {
-            const yValue = this.tDistributionPDF(tStatistic, df);
-            
-            // 添加垂直线
-            this.chart.data.datasets.push({
-                label: '检验统计量线',
-                data: [{x: tStatistic, y: 0}, {x: tStatistic, y: yValue}],
-                borderColor: '#ffc107',
-                backgroundColor: 'transparent',
-                borderWidth: 3,
-                pointRadius: 0,
-                showLine: true,
-                tension: 0,
-                fill: false
-            });
-            
-            // 添加顶部标记点
-            this.chart.data.datasets.push({
-                label: '检验统计量',
-                data: [{x: tStatistic, y: yValue}],
-                borderColor: '#ffc107',
-                backgroundColor: '#ffc107',
-                pointRadius: 8,
-                pointHoverRadius: 10,
-                showLine: false,
-                type: 'scatter'
-            });
+        let criticalText = '';
+        switch(testType) {
+            case 'two-tailed':
+                criticalText = `±${criticalValue.toFixed(3)}`;
+                break;
+            case 'left-tailed':
+                criticalText = criticalValue.toFixed(3);
+                break;
+            case 'right-tailed':
+                criticalText = criticalValue.toFixed(3);
+                break;
         }
 
-        this.chart.update('none');
+        const resultsHtml = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-primary mb-3">样本统计量</h6>
+                    <table class="table results-table table-sm">
+                        <tbody>
+                            <tr><td><strong>样本均值</strong></td><td>${sampleMean.toFixed(4)}</td></tr>
+                            <tr><td><strong>样本标准差</strong></td><td>${sampleStd.toFixed(4)}</td></tr>
+                            <tr><td><strong>标准误</strong></td><td>${standardError.toFixed(4)}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-success mb-3">检验统计量</h6>
+                    <table class="table results-table table-sm">
+                        <tbody>
+                            <tr><td><strong>t统计量</strong></td><td>${tStatistic.toFixed(4)}</td></tr>
+                            <tr><td><strong>自由度</strong></td><td>${df}</td></tr>
+                            <tr><td><strong>p值</strong></td><td>${pValue.toFixed(4)}</td></tr>
+                            <tr><td><strong>临界值</strong></td><td>${criticalText}</td></tr>
+                            <tr><td><strong>显著性水平</strong></td><td>${alpha}</td></tr>
+                            <tr><td><strong>检验结论</strong></td><td>${reject ? '<span class="text-danger">拒绝H₀</span>' : '<span class="text-success">接受H₀</span>'}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h6 class="text-info mb-3">置信区间</h6>
+                    <div class="alert alert-info">
+                        <strong>95% 置信区间:</strong> [${ciLower.toFixed(4)}, ${ciUpper.toFixed(4)}]
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('resultsContainer').innerHTML = resultsHtml;
     }
+
+
 
     runSimulation() {
         const iterations = 1000;
@@ -390,24 +417,59 @@ class TTestOneSampleSimulator {
         const avgPValue = this.simulationResults.pValues.reduce((sum, p) => sum + p, 0) / 
                          this.simulationResults.pValues.length;
 
-        document.getElementById('rejectionCount').textContent = this.simulationResults.rejections;
-        document.getElementById('rejectionRate').textContent = (rejectionRate * 100).toFixed(2) + '%';
-        document.getElementById('avgPValue').textContent = avgPValue.toFixed(4);
-
         // 计算第二类错误率和检验功效
         const mu0 = parseFloat(document.getElementById('mu0').value);
         const trueMu = parseFloat(document.getElementById('trueMu').value);
+        const alpha = parseFloat(document.getElementById('alpha').value);
 
+        let power, typeIIError;
         if (Math.abs(trueMu - mu0) < 0.001) {
-            // H0为真，无法计算检验功效和第二类错误率
-            document.getElementById('typeIIError').textContent = '-';
-            document.getElementById('power').textContent = '-';
+            // H0为真，拒绝率应该接近α（第一类错误率）
+            power = '-';
+            typeIIError = '-';
         } else {
             // H0为假，拒绝率就是检验功效，第二类错误率 = 1 - 检验功效
-            const power = rejectionRate;
-            const typeIIError = 1 - power;
-            document.getElementById('power').textContent = (power * 100).toFixed(2) + '%';
-            document.getElementById('typeIIError').textContent = (typeIIError * 100).toFixed(2) + '%';
+            power = (rejectionRate * 100).toFixed(2) + '%';
+            typeIIError = ((1 - rejectionRate) * 100).toFixed(2) + '%';
+        }
+
+        // 显示模拟结果
+        const simulationHtml = `
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h6 class="text-warning mb-3">模拟结果 (1000次)</h6>
+                    <table class="table results-table table-sm">
+                        <tbody>
+                            <tr><td><strong>拒绝H₀次数</strong></td><td>${this.simulationResults.rejections}</td><td><strong>拒绝率</strong></td><td>${(rejectionRate * 100).toFixed(2)}%</td></tr>
+                            <tr><td><strong>平均p值</strong></td><td>${avgPValue.toFixed(4)}</td><td><strong>检验功效</strong></td><td>${power}</td></tr>
+                            <tr><td><strong>第二类错误率</strong></td><td>${typeIIError}</td><td><strong>模拟状态</strong></td><td>完成</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        // 检查是否已经有模拟结果，如果有就替换，如果没有就添加
+        const currentResults = document.getElementById('resultsContainer').innerHTML;
+        
+        // 查找是否已经存在模拟结果部分
+        if (currentResults.includes('模拟结果 (1000次)')) {
+            // 如果已经存在，替换整个结果容器内容，保留单次检验结果，替换模拟结果
+            const resultsContainer = document.getElementById('resultsContainer');
+            const existingRows = resultsContainer.querySelectorAll('.row');
+            
+            // 移除现有的模拟结果
+            existingRows.forEach(row => {
+                if (row.innerHTML.includes('模拟结果 (1000次)')) {
+                    row.remove();
+                }
+            });
+            
+            // 添加新的模拟结果
+            resultsContainer.insertAdjacentHTML('beforeend', simulationHtml);
+        } else {
+            // 如果不存在，直接添加
+            document.getElementById('resultsContainer').insertAdjacentHTML('beforeend', simulationHtml);
         }
     }
 
@@ -418,25 +480,20 @@ class TTestOneSampleSimulator {
             pValues: []
         };
 
-        // 清空结果显示
-        document.getElementById('sampleMean').textContent = '-';
-        document.getElementById('sampleStd').textContent = '-';
-        document.getElementById('testStatistic').textContent = '-';
-        document.getElementById('degreesOfFreedom').textContent = '-';
-        document.getElementById('pValue').textContent = '-';
-        document.getElementById('testConclusion').textContent = '-';
-        document.getElementById('confidenceInterval').textContent = '-';
-        document.getElementById('rejectionCount').textContent = '-';
-        document.getElementById('rejectionRate').textContent = '-';
-        document.getElementById('typeIIError').textContent = '-';
-        document.getElementById('power').textContent = '-';
-        document.getElementById('avgPValue').textContent = '-';
-        document.getElementById('simulationStatus').textContent = '未开始';
+        // 重置结果显示
+        document.getElementById('resultsContainer').innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                点击"生成样本并执行检验"开始分析
+            </div>
+        `;
 
-        // 重置图表
+        document.getElementById('simulationStatus').textContent = '就绪';
+
+        // 重置图表中的检验统计量标记
         if (this.chart) {
-            this.chart.data.datasets = this.chart.data.datasets.filter(dataset => 
-                dataset.label !== '检验统计量' && dataset.label !== '检验统计量线');
+            this.chart.testStatisticPosition = undefined;
+            this.chart.testResults = undefined;
             this.chart.update('none');
         }
     }

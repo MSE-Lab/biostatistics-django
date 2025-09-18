@@ -1,4 +1,4 @@
-class ZTestOneSampleSimulator {
+class ProportionTestOneSampleSimulator {
     constructor() {
         this.chart = null;
         this.simulationResults = {
@@ -14,10 +14,9 @@ class ZTestOneSampleSimulator {
 
     initializeEventListeners() {
         // 参数变化监听
-        document.getElementById('mu0').addEventListener('input', () => this.updateDisplay());
+        document.getElementById('p0').addEventListener('input', () => this.updateDisplay());
         document.getElementById('testType').addEventListener('change', () => this.updateDisplay());
-        document.getElementById('sigma').addEventListener('input', () => this.updateDisplay());
-        document.getElementById('trueMu').addEventListener('input', () => this.updateDisplay());
+        document.getElementById('trueP').addEventListener('input', () => this.updateDisplay());
         document.getElementById('alpha').addEventListener('change', () => this.updateDisplay());
         document.getElementById('sampleSize').addEventListener('input', () => this.updateDisplay());
 
@@ -28,7 +27,7 @@ class ZTestOneSampleSimulator {
     }
 
     updateDisplay() {
-        const mu0 = parseFloat(document.getElementById('mu0').value);
+        const p0 = parseFloat(document.getElementById('p0').value);
         const testType = document.getElementById('testType').value;
         const alpha = parseFloat(document.getElementById('alpha').value);
 
@@ -36,13 +35,13 @@ class ZTestOneSampleSimulator {
         let alternativeText = '';
         switch(testType) {
             case 'two-tailed':
-                alternativeText = 'μ ≠ μ₀ (总体均值不等于假设值)';
+                alternativeText = 'p ≠ p₀ (比例不等于假设值)';
                 break;
             case 'left-tailed':
-                alternativeText = 'μ < μ₀ (总体均值小于假设值)';
+                alternativeText = 'p < p₀ (比例小于假设值)';
                 break;
             case 'right-tailed':
-                alternativeText = 'μ > μ₀ (总体均值大于假设值)';
+                alternativeText = 'p > p₀ (比例大于假设值)';
                 break;
         }
         document.getElementById('alternativeHypothesis').textContent = alternativeText;
@@ -218,20 +217,19 @@ class ZTestOneSampleSimulator {
     }
 
     generateSampleAndTest() {
-        const mu0 = parseFloat(document.getElementById('mu0').value);
-        const sigma = parseFloat(document.getElementById('sigma').value);
-        const trueMu = parseFloat(document.getElementById('trueMu').value);
+        const p0 = parseFloat(document.getElementById('p0').value);
+        const trueP = parseFloat(document.getElementById('trueP').value);
         const n = parseInt(document.getElementById('sampleSize').value);
         const alpha = parseFloat(document.getElementById('alpha').value);
         const testType = document.getElementById('testType').value;
 
-        // 生成样本
-        const sample = this.generateNormalSample(trueMu, sigma, n);
-        const sampleMean = sample.reduce((sum, x) => sum + x, 0) / n;
+        // 生成二项分布样本
+        const successes = this.generateBinomialSample(trueP, n);
+        const sampleProportion = successes / n;
 
-        // 计算检验统计量
-        const standardError = sigma / Math.sqrt(n);
-        const zStatistic = (sampleMean - mu0) / standardError;
+        // 计算检验统计量（使用正态近似）
+        const standardError = Math.sqrt(p0 * (1 - p0) / n);
+        const zStatistic = (sampleProportion - p0) / standardError;
 
         // 计算p值
         const pValue = this.calculatePValue(zStatistic, testType);
@@ -258,7 +256,8 @@ class ZTestOneSampleSimulator {
 
         // 显示结果
         this.displayResults({
-            sampleMean,
+            sampleProportion,
+            successes,
             zStatistic,
             pValue,
             criticalValue,
@@ -266,7 +265,7 @@ class ZTestOneSampleSimulator {
             testType,
             alpha,
             standardError,
-            sigma,
+            p0,
             n
         });
     }
@@ -285,15 +284,16 @@ class ZTestOneSampleSimulator {
 
     displayResults(results) {
         const {
-            sampleMean, zStatistic, pValue, criticalValue, 
-            reject, testType, alpha, standardError, sigma, n
+            sampleProportion, successes, zStatistic, pValue, criticalValue, 
+            reject, testType, alpha, standardError, p0, n
         } = results;
 
         // 计算置信区间
         const criticalValueForCI = this.getStandardNormalCriticalValue(0.025); // 95% 置信区间
-        const marginOfError = criticalValueForCI * standardError;
-        const ciLower = sampleMean - marginOfError;
-        const ciUpper = sampleMean + marginOfError;
+        const ciStandardError = Math.sqrt(sampleProportion * (1 - sampleProportion) / n);
+        const marginOfError = criticalValueForCI * ciStandardError;
+        const ciLower = Math.max(0, sampleProportion - marginOfError);
+        const ciUpper = Math.min(1, sampleProportion + marginOfError);
 
         let criticalText = '';
         switch(testType) {
@@ -314,7 +314,8 @@ class ZTestOneSampleSimulator {
                     <h6 class="text-primary mb-3">样本统计量</h6>
                     <table class="table results-table table-sm">
                         <tbody>
-                            <tr><td><strong>样本均值</strong></td><td>${sampleMean.toFixed(4)}</td></tr>
+                            <tr><td><strong>样本比例</strong></td><td>${sampleProportion.toFixed(4)}</td></tr>
+                            <tr><td><strong>成功次数</strong></td><td>${successes}</td></tr>
                             <tr><td><strong>样本大小</strong></td><td>${n}</td></tr>
                             <tr><td><strong>标准误</strong></td><td>${standardError.toFixed(4)}</td></tr>
                         </tbody>
@@ -325,7 +326,7 @@ class ZTestOneSampleSimulator {
                     <table class="table results-table table-sm">
                         <tbody>
                             <tr><td><strong>z统计量</strong></td><td>${zStatistic.toFixed(4)}</td></tr>
-                            <tr><td><strong>总体标准差</strong></td><td>${sigma}</td></tr>
+                            <tr><td><strong>假设比例</strong></td><td>${p0}</td></tr>
                             <tr><td><strong>p值</strong></td><td>${pValue.toFixed(4)}</td></tr>
                             <tr><td><strong>临界值</strong></td><td>${criticalText}</td></tr>
                             <tr><td><strong>显著性水平</strong></td><td>${alpha}</td></tr>
@@ -349,9 +350,8 @@ class ZTestOneSampleSimulator {
 
     runSimulation() {
         const numSimulations = 1000;
-        const mu0 = parseFloat(document.getElementById('mu0').value);
-        const sigma = parseFloat(document.getElementById('sigma').value);
-        const trueMu = parseFloat(document.getElementById('trueMu').value);
+        const p0 = parseFloat(document.getElementById('p0').value);
+        const trueP = parseFloat(document.getElementById('trueP').value);
         const n = parseInt(document.getElementById('sampleSize').value);
         const alpha = parseFloat(document.getElementById('alpha').value);
         const testType = document.getElementById('testType').value;
@@ -363,13 +363,13 @@ class ZTestOneSampleSimulator {
         };
 
         for (let i = 0; i < numSimulations; i++) {
-            // 生成样本
-            const sample = this.generateNormalSample(trueMu, sigma, n);
-            const sampleMean = sample.reduce((sum, x) => sum + x, 0) / n;
+            // 生成二项分布样本
+            const successes = this.generateBinomialSample(trueP, n);
+            const sampleProportion = successes / n;
 
             // 计算检验统计量
-            const standardError = sigma / Math.sqrt(n);
-            const zStatistic = (sampleMean - mu0) / standardError;
+            const standardError = Math.sqrt(p0 * (1 - p0) / n);
+            const zStatistic = (sampleProportion - p0) / standardError;
 
             // 计算p值
             const pValue = this.calculatePValue(zStatistic, testType);
@@ -392,12 +392,12 @@ class ZTestOneSampleSimulator {
                          this.simulationResults.pValues.length;
 
         // 计算第二类错误率和检验功效
-        const mu0 = parseFloat(document.getElementById('mu0').value);
-        const trueMu = parseFloat(document.getElementById('trueMu').value);
+        const p0 = parseFloat(document.getElementById('p0').value);
+        const trueP = parseFloat(document.getElementById('trueP').value);
         const alpha = parseFloat(document.getElementById('alpha').value);
 
         let power, typeIIError;
-        if (Math.abs(trueMu - mu0) < 0.001) {
+        if (Math.abs(trueP - p0) < 0.001) {
             // H0为真，拒绝率应该接近α（第一类错误率）
             power = '-';
             typeIIError = '-';
@@ -455,7 +455,12 @@ class ZTestOneSampleSimulator {
         };
 
         // 清空结果显示
-        document.getElementById('resultsContainer').innerHTML = '';
+        document.getElementById('resultsContainer').innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                点击"生成样本并执行检验"开始分析
+            </div>
+        `;
 
         // 重置图表
         if (this.chart) {
@@ -466,16 +471,15 @@ class ZTestOneSampleSimulator {
         }
     }
 
-    generateNormalSample(mean, stdDev, size) {
-        const sample = [];
-        for (let i = 0; i < size; i++) {
-            // Box-Muller变换生成正态分布随机数
-            const u1 = Math.random();
-            const u2 = Math.random();
-            const z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-            sample.push(mean + z0 * stdDev);
+    generateBinomialSample(p, n) {
+        // 生成二项分布样本（成功次数）
+        let successes = 0;
+        for (let i = 0; i < n; i++) {
+            if (Math.random() < p) {
+                successes++;
+            }
         }
-        return sample;
+        return successes;
     }
 
     standardNormalPDF(x) {
@@ -530,5 +534,5 @@ class ZTestOneSampleSimulator {
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', function() {
-    new ZTestOneSampleSimulator();
+    new ProportionTestOneSampleSimulator();
 });

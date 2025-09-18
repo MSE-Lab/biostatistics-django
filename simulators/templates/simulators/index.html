@@ -69,6 +69,91 @@
             <div class="card simulator-card h-100">
                 <div class="card-body text-center">
                     <div class="simulator-icon mb-3">
+                        <i class="fas fa-calculator fa-3x text-info"></i>
+                    </div>
+                    <h5 class="card-title">t分布计算器</h5>
+                    <p class="card-text">
+                        显示不同自由度下的t分布密度曲线，计算分位数函数值和累积分布函数值。
+                    </p>
+                    <a href="{% url 'simulators:t_distribution_calculator' %}" class="btn btn-info">
+                        开始计算
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card simulator-card h-100">
+                <div class="card-body text-center">
+                    <div class="simulator-icon mb-3">
+                        <i class="fas fa-calculator fa-3x text-info"></i>
+                    </div>
+                    <h5 class="card-title">χ²分布计算器</h5>
+                    <p class="card-text">
+                        显示不同自由度下的χ²分布密度曲线，计算分位数函数值和累积分布函数值。
+                    </p>
+                    <a href="{% url 'simulators:chi_square_distribution_calculator' %}" class="btn btn-info">
+                        开始计算
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card simulator-card h-100">
+                <div class="card-body text-center">
+                    <div class="simulator-icon mb-3">
+                        <i class="fas fa-calculator fa-3x text-info"></i>
+                    </div>
+                    <h5 class="card-title">F分布计算器</h5>
+                    <p class="card-text">
+                        显示不同自由度下的F分布密度曲线，计算分位数函数值和累积分布函数值。
+                    </p>
+                    <a href="{% url 'simulators:f_distribution_calculator' %}" class="btn btn-info">
+                        开始计算
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card simulator-card h-100">
+                <div class="card-body text-center">
+                    <div class="simulator-icon mb-3">
+                        <i class="fas fa-calculator fa-3x text-info"></i>
+                    </div>
+                    <h5 class="card-title">置信区间计算器</h5>
+                    <p class="card-text">
+                        计算单样本均值的置信区间，理解置信水平和误差边际的概念。
+                    </p>
+                    <a href="{% url 'simulators:confidence_interval' %}" class="btn btn-info">
+                        开始计算
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card simulator-card h-100">
+                <div class="card-body text-center">
+                    <div class="simulator-icon mb-3">
+                        <i class="fas fa-coffee fa-3x" style="color: #8b4513;"></i>
+                    </div>
+                    <h5 class="card-title">"女士品茶"试验模拟</h5>
+                    <p class="card-text">
+                        重现Fisher经典实验，体验假设检验的诞生过程和统计学发展历程。
+                    </p>
+                    <a href="{% url 'simulators:lady_tasting_tea' %}" class="btn" style="background: linear-gradient(135deg, #8b4513, #a0522d); color: white;">
+                        开始实验
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card simulator-card h-100">
+                <div class="card-body text-center">
+                    <div class="simulator-icon mb-3">
                         <i class="fas fa-chart-line fa-3x text-success"></i>
                     </div>
                     <h5 class="card-title">单样本z检验模拟器</h5>
@@ -103,15 +188,15 @@
             <div class="card simulator-card h-100">
                 <div class="card-body text-center">
                     <div class="simulator-icon mb-3">
-                        <i class="fas fa-percentage fa-3x text-warning"></i>
+                        <i class="fas fa-percentage fa-3x text-success"></i>
                     </div>
                     <h5 class="card-title">单样本比例检验模拟器</h5>
                     <p class="card-text text-muted">
                         检验样本比例是否等于某个特定值，理解二项分布的大样本近似。
                     </p>
-                    <button class="btn btn-outline-secondary" disabled>
-                        即将推出
-                    </button>
+                    <a href="{% url 'simulators:proportion_test_one_sample' %}" class="btn btn-success">
+                        开始学习
+                    </a>
                 </div>
             </div>
         </div>
@@ -123,12 +208,12 @@
                         <i class="fas fa-square-root-alt fa-3x text-success"></i>
                     </div>
                     <h5 class="card-title">单样本方差卡方检验模拟器</h5>
-                    <p class="card-text text-muted">
+                    <p class="card-text">
                         检验总体方差是否等于某个特定值，学习卡方分布的应用。
                     </p>
-                    <button class="btn btn-outline-secondary" disabled>
-                        即将推出
-                    </button>
+                    <a href="{% url 'simulators:chi_square_variance_test' %}" class="btn btn-success">
+                        开始学习
+                    </a>
                 </div>
             </div>
         </div>
@@ -137,15 +222,15 @@
             <div class="card simulator-card h-100">
                 <div class="card-body text-center">
                     <div class="simulator-icon mb-3">
-                        <i class="fas fa-layer-group fa-3x text-dark"></i>
+                        <i class="fas fa-layer-group fa-3x text-success"></i>
                     </div>
                     <h5 class="card-title">双样本F检验模拟器</h5>
-                    <p class="card-text text-muted">
+                    <p class="card-text">
                         比较两个样本的方差是否相等，理解F分布和方差齐性检验。
                     </p>
-                    <button class="btn btn-outline-secondary" disabled>
-                        即将推出
-                    </button>
+                    <a href="{% url 'simulators:f_test_two_sample' %}" class="btn btn-success">
+                        开始学习
+                    </a>
                 </div>
             </div>
         </div>
@@ -163,6 +248,23 @@
                     <a href="{% url 'simulators:t_test_two_sample' %}" class="btn btn-success">
                         开始学习
                     </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-4">
+            <div class="card simulator-card h-100">
+                <div class="card-body text-center">
+                    <div class="simulator-icon mb-3">
+                        <i class="fas fa-calculator fa-3x text-secondary"></i>
+                    </div>
+                    <h5 class="card-title">方差分析模拟器</h5>
+                    <p class="card-text text-muted">
+                        计算和可视化方法分析，理解多组样本均值的比较。
+                    </p>
+                    <button class="btn btn-outline-secondary" disabled>
+                        即将推出
+                    </button>
                 </div>
             </div>
         </div>
@@ -184,17 +286,15 @@
             </div>
         </div>
 
-        
-
         <div class="col-md-6 col-lg-4">
             <div class="card simulator-card h-100">
                 <div class="card-body text-center">
                     <div class="simulator-icon mb-3">
-                        <i class="fas fa-calculator fa-3x text-secondary"></i>
+                        <i class="fas fa-project-diagram fa-3x text-warning"></i>
                     </div>
-                    <h5 class="card-title">置信区间计算器</h5>
+                    <h5 class="card-title">相关分析模拟器</h5>
                     <p class="card-text text-muted">
-                        计算和可视化不同置信水平下的置信区间。
+                        可视化Pearson相关系数和相关分析，理解相关性和因果关系。
                     </p>
                     <button class="btn btn-outline-secondary" disabled>
                         即将推出
@@ -202,6 +302,7 @@
                 </div>
             </div>
         </div>
+
     </div>
 </div>
 {% endblock %}

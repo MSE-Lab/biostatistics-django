@@ -1,157 +1,93 @@
 class TTestTwoSampleSimulator {
     constructor() {
         this.chart = null;
+        this.testResults = null;
         this.simulationResults = {
             totalTests: 0,
             rejections: 0,
             pValues: []
         };
         
-        this.initializeEventListeners();
-        this.updateDisplay();
-        this.createChart();
+        // 确保DOM元素存在后再初始化
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                this.initializeChart();
+                this.setupEventListeners();
+                this.updateDisplay();
+            });
+        } else {
+            this.initializeChart();
+            this.setupEventListeners();
+            this.updateDisplay();
+        }
     }
 
-    initializeEventListeners() {
-        // 检验设计变化监听
-        document.getElementById('testDesign').addEventListener('change', () => {
-            this.updateTestDesignUI();
-            this.updateDisplay();
-        });
-
+    setupEventListeners() {
         // 参数变化监听
-        document.getElementById('mu0Diff').addEventListener('input', () => this.updateDisplay());
         document.getElementById('testType').addEventListener('change', () => this.updateDisplay());
-        document.getElementById('trueMu1').addEventListener('input', () => this.updateDisplay());
-        document.getElementById('trueMu2').addEventListener('input', () => this.updateDisplay());
-        document.getElementById('trueSigma1').addEventListener('input', () => this.updateDisplay());
-        document.getElementById('trueSigma2').addEventListener('input', () => this.updateDisplay());
-        document.getElementById('alpha').addEventListener('change', () => this.updateDisplay());
-
-        // 相关系数滑块
-        document.getElementById('correlation').addEventListener('input', (e) => {
-            document.getElementById('correlationValue').textContent = e.target.value;
-            this.updateDisplay();
-        });
+        document.getElementById('significanceLevel').addEventListener('change', () => this.updateDisplay());
+        document.getElementById('varianceHomogeneity').addEventListener('change', () => this.updateDisplay());
         
-        // 样本量滑块
-        document.getElementById('sampleSize1').addEventListener('input', (e) => {
-            document.getElementById('sampleSize1Value').textContent = e.target.value;
-            this.updateDfDisplay();
-            this.updateDisplay();
-        });
-
-        document.getElementById('sampleSize2').addEventListener('input', (e) => {
-            document.getElementById('sampleSize2Value').textContent = e.target.value;
-            this.updateDfDisplay();
-            this.updateDisplay();
-        });
+        // 样本参数变化监听
+        document.getElementById('sampleSize1').addEventListener('input', () => this.updateDisplay());
+        document.getElementById('sampleSize2').addEventListener('input', () => this.updateDisplay());
+        document.getElementById('populationMean1').addEventListener('input', () => this.updateDisplay());
+        document.getElementById('populationMean2').addEventListener('input', () => this.updateDisplay());
+        document.getElementById('populationStd1').addEventListener('input', () => this.updateDisplay());
+        document.getElementById('populationStd2').addEventListener('input', () => this.updateDisplay());
 
         // 按钮事件
-        document.getElementById('generateSample').addEventListener('click', () => this.generateSampleAndTest());
+        document.getElementById('runTest').addEventListener('click', () => this.generateSampleAndTest());
         document.getElementById('runSimulation').addEventListener('click', () => this.runSimulation());
         document.getElementById('resetSimulation').addEventListener('click', () => this.resetSimulation());
-
-        // 初始化UI
-        this.updateTestDesignUI();
-    }
-
-    updateTestDesignUI() {
-        const testDesign = document.getElementById('testDesign').value;
-        const isPaired = testDesign === 'paired';
-
-        // 显示/隐藏相关元素
-        document.getElementById('correlationDiv').style.display = isPaired ? 'block' : 'none';
-        document.getElementById('sampleSize2Div').style.display = isPaired ? 'none' : 'block';
-        document.getElementById('varianceAssumption').style.display = isPaired ? 'none' : 'block';
-
-        // 更新帮助文本
-        const helpText = isPaired ? 
-            '配对样本：比较同一对象的两次测量' : 
-            '独立样本：比较两个独立组的均值';
-        document.getElementById('testDesignHelp').textContent = helpText;
-
-        // 更新检验步骤
-        this.updateTestSteps();
-        this.updateDfDisplay();
-    }
-
-    updateTestSteps() {
-        const testDesign = document.getElementById('testDesign').value;
-        const isPaired = testDesign === 'paired';
-        
-        const steps = isPaired ? [
-            '建立假设：H₀ vs H₁',
-            '选择显著性水平',
-            '计算差值：d = x₁ - x₂',
-            '计算检验统计量：t = d̄/(sd/√n)',
-            '做出统计决策'
-        ] : [
-            '建立假设：H₀ vs H₁',
-            '选择显著性水平',
-            'F检验：检验方差齐性',
-            '根据F检验结果选择t检验方法',
-            '计算检验统计量：t = (x̄₁-x̄₂)/SE',
-            '做出统计决策'
-        ];
-
-        const stepsList = document.getElementById('testSteps');
-        stepsList.innerHTML = '';
-        steps.forEach((step, index) => {
-            const li = document.createElement('li');
-            li.textContent = step;
-            stepsList.appendChild(li);
-        });
-    }
-
-    updateDfDisplay() {
-        const testDesign = document.getElementById('testDesign').value;
-        const n1 = parseInt(document.getElementById('sampleSize1').value);
-        
-        let df, dfText;
-        if (testDesign === 'paired') {
-            df = n1 - 1;
-            dfText = `自由度 df = n - 1 = ${df}`;
-        } else {
-            const n2 = parseInt(document.getElementById('sampleSize2').value);
-            df = n1 + n2 - 2;
-            dfText = `自由度 df = n₁ + n₂ - 2 = ${df} (将根据F检验结果调整)`;
-        }
-        
-        document.getElementById('dfInfo').textContent = dfText;
     }
 
     updateDisplay() {
-        const mu0Diff = parseFloat(document.getElementById('mu0Diff').value);
         const testType = document.getElementById('testType').value;
-        const alpha = parseFloat(document.getElementById('alpha').value);
-        const testDesign = document.getElementById('testDesign').value;
+        const alpha = parseFloat(document.getElementById('significanceLevel').value);
+        const varianceHomogeneity = document.getElementById('varianceHomogeneity').value;
 
         // 更新假设显示
-        document.getElementById('h0Value').textContent = mu0Diff;
-        document.getElementById('alphaValue').textContent = alpha;
-        document.getElementById('testTypeDisplay').textContent = 
-            testDesign === 'paired' ? '配对样本' : '独立样本';
-        
         let h1Text = '';
         switch(testType) {
             case 'two-tailed':
-                h1Text = mu0Diff === 0 ? 'μ₁ ≠ μ₂' : `μ₁ - μ₂ ≠ ${mu0Diff}`;
+                h1Text = 'μ₁ ≠ μ₂ (两总体均值不等)';
                 break;
             case 'left-tailed':
-                h1Text = mu0Diff === 0 ? 'μ₁ < μ₂' : `μ₁ - μ₂ < ${mu0Diff}`;
+                h1Text = 'μ₁ < μ₂ (样本1均值小于样本2)';
                 break;
             case 'right-tailed':
-                h1Text = mu0Diff === 0 ? 'μ₁ > μ₂' : `μ₁ - μ₂ > ${mu0Diff}`;
+                h1Text = 'μ₁ > μ₂ (样本1均值大于样本2)';
                 break;
         }
-        document.getElementById('h1Value').textContent = h1Text;
+        document.getElementById('alternativeHypothesis').textContent = h1Text;
+
+        // 更新检验统计量公式
+        const formula = varianceHomogeneity === 'yes' ? 
+            't = (x̄₁ - x̄₂) / (sp√(1/n₁ + 1/n₂))' : 
+            't = (x̄₁ - x̄₂) / √(s₁²/n₁ + s₂²/n₂)';
+        document.getElementById('testStatisticFormula').textContent = formula;
+
+        // 更新决策规则
+        let decisionRule = '';
+        switch(testType) {
+            case 'two-tailed':
+                decisionRule = `当p < ${alpha}时拒绝H₀`;
+                break;
+            case 'left-tailed':
+                decisionRule = `当t < -t_{α,df}或p < ${alpha}时拒绝H₀`;
+                break;
+            case 'right-tailed':
+                decisionRule = `当t > t_{α,df}或p < ${alpha}时拒绝H₀`;
+                break;
+        }
+        document.getElementById('decisionRule').textContent = decisionRule;
 
         // 更新图表
         this.updateChart();
     }
 
-    createChart() {
+    initializeChart() {
         const ctx = document.getElementById('distributionChart').getContext('2d');
         
         this.chart = new Chart(ctx, {
@@ -212,8 +148,50 @@ class TTestTwoSampleSimulator {
                         }
                     }
                 }
-            }
+            },
+            plugins: [{
+                id: 'testStatisticLine',
+                afterDraw: (chart) => {
+                    // 只在有检验统计量时才绘制
+                    if (chart.testStatisticPosition === null || chart.testStatisticPosition === undefined) {
+                        return;
+                    }
+                    
+                    const ctx = chart.ctx;
+                    const chartArea = chart.chartArea;
+                    const scales = chart.scales;
+                    const tValue = chart.testStatisticPosition;
+                    
+                    const xPosition = scales.x.getPixelForValue(tValue);
+                    
+                    // 绘制垂直线
+                    ctx.save();
+                    ctx.strokeStyle = '#ffc107';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(xPosition, chartArea.bottom);
+                    ctx.lineTo(xPosition, chartArea.top);
+                    ctx.stroke();
+                    
+                    // 添加文本标签
+                    if (chart.testResults) {
+                        const yValue = chart.testResults.tDistributionPDF(tValue, chart.testResults.df);
+                        const yPosition = scales.y.getPixelForValue(yValue);
+                        
+                        ctx.fillStyle = '#333';
+                        ctx.font = '12px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(`t = ${tValue.toFixed(3)}`, 
+                                   xPosition, yPosition - 15);
+                    }
+                    
+                    ctx.restore();
+                }
+            }]
         });
+
+        // 初始化测试统计量位置
+        this.chart.testStatisticPosition = null;
 
         this.updateChart();
     }
@@ -221,53 +199,48 @@ class TTestTwoSampleSimulator {
     updateChart() {
         if (!this.chart) return;
 
-        const alpha = parseFloat(document.getElementById('alpha').value);
+        const alpha = parseFloat(document.getElementById('significanceLevel').value);
         const testType = document.getElementById('testType').value;
         const df = this.calculateCurrentDf();
 
         // 生成t分布数据
-        const xValues = [];
-        const yValues = [];
+        const dataPoints = [];
+        const rejectionPoints = [];
 
         for (let x = -4; x <= 4; x += 0.05) {
-            xValues.push(x);
-            yValues.push(this.tDistributionPDF(x, df));
+            const y = this.tDistributionPDF(x, df);
+            dataPoints.push({x: x, y: y});
+            
+            // 生成拒绝域数据
+            const inRejectionRegion = this.isInRejectionRegion(x, alpha, testType, df);
+            rejectionPoints.push(inRejectionRegion ? {x: x, y: y} : {x: x, y: null});
         }
 
-        // 生成拒绝域数据
-        const rejectionData = this.generateRejectionRegionData(alpha, testType, df);
-
         // 更新图表数据
-        this.chart.data.labels = xValues;
-        this.chart.data.datasets[0].data = yValues;
-        this.chart.data.datasets[1].data = rejectionData;
+        this.chart.data.labels = [];
+        this.chart.data.datasets[0].data = dataPoints;
+        this.chart.data.datasets[1].data = rejectionPoints;
 
         // 更新图表标题
         this.chart.data.datasets[0].label = `t分布 (df=${df})`;
-
-        // 更新临界值显示
-        this.updateCriticalValueDisplay();
 
         this.chart.update('none');
     }
 
     calculateCurrentDf() {
-        const testDesign = document.getElementById('testDesign').value;
         const n1 = parseInt(document.getElementById('sampleSize1').value);
+        const n2 = parseInt(document.getElementById('sampleSize2').value);
+        const varianceHomogeneity = document.getElementById('varianceHomogeneity').value;
         
-        if (testDesign === 'paired') {
-            return n1 - 1;
-        } else {
-            const n2 = parseInt(document.getElementById('sampleSize2').value);
-            // 默认使用等方差假设的自由度进行图表显示
-            // 实际检验时会根据F检验结果动态调整
+        if (varianceHomogeneity === 'yes') {
             return n1 + n2 - 2;
+        } else {
+            // 简化的Welch自由度估计
+            return Math.min(n1 - 1, n2 - 1) + 10;
         }
     }
 
-    generateRejectionRegionData(alpha, testType, df) {
-        const rejectionData = [];
-        
+    isInRejectionRegion(x, alpha, testType, df) {
         // 获取临界值
         let leftCritical = null;
         let rightCritical = null;
@@ -286,139 +259,34 @@ class TTestTwoSampleSimulator {
                 break;
         }
 
-        // 为每个x值生成对应的y值（如果在拒绝域内）
-        for (let x = -4; x <= 4; x += 0.05) {
-            let inRejectionRegion = false;
-            
-            if (testType === 'two-tailed') {
-                inRejectionRegion = x <= leftCritical || x >= rightCritical;
-            } else if (testType === 'left-tailed') {
-                inRejectionRegion = x <= leftCritical;
-            } else if (testType === 'right-tailed') {
-                inRejectionRegion = x >= rightCritical;
-            }
-            
-            rejectionData.push(inRejectionRegion ? this.tDistributionPDF(x, df) : null);
-        }
-
-        return rejectionData;
-    }
-
-    updateCriticalValueDisplay() {
-        const alpha = parseFloat(document.getElementById('alpha').value);
-        const testType = document.getElementById('testType').value;
-        const df = this.calculateCurrentDf();
-
-        let criticalText = '';
-        switch(testType) {
-            case 'two-tailed':
-                const criticalValue = this.getTCriticalValue(alpha / 2, df);
-                criticalText = `±${criticalValue.toFixed(3)}`;
-                break;
-            case 'left-tailed':
-                const leftCritical = this.getTCriticalValue(alpha, df, true);
-                criticalText = leftCritical.toFixed(3);
-                break;
-            case 'right-tailed':
-                const rightCritical = this.getTCriticalValue(alpha, df);
-                criticalText = rightCritical.toFixed(3);
-                break;
+        // 判断是否在拒绝域内
+        if (testType === 'two-tailed') {
+            return x <= leftCritical || x >= rightCritical;
+        } else if (testType === 'left-tailed') {
+            return x <= leftCritical;
+        } else if (testType === 'right-tailed') {
+            return x >= rightCritical;
         }
         
-        document.getElementById('criticalValue').textContent = criticalText;
+        return false;
     }
+
+
 
     generateSampleAndTest() {
-        const testDesign = document.getElementById('testDesign').value;
-        
-        if (testDesign === 'paired') {
-            this.performPairedTest();
-        } else {
-            this.performIndependentTest();
-        }
-    }
-
-    performPairedTest() {
-        const mu0Diff = parseFloat(document.getElementById('mu0Diff').value);
-        const trueMu1 = parseFloat(document.getElementById('trueMu1').value);
-        const trueMu2 = parseFloat(document.getElementById('trueMu2').value);
-        const trueSigma1 = parseFloat(document.getElementById('trueSigma1').value);
-        const trueSigma2 = parseFloat(document.getElementById('trueSigma2').value);
-        const correlation = parseFloat(document.getElementById('correlation').value);
-        const n = parseInt(document.getElementById('sampleSize1').value);
-        const alpha = parseFloat(document.getElementById('alpha').value);
-        const testType = document.getElementById('testType').value;
-        const df = n - 1;
-
-        // 生成配对样本
-        const {sample1, sample2} = this.generatePairedSamples(trueMu1, trueMu2, trueSigma1, trueSigma2, correlation, n);
-        
-        // 计算差值
-        const differences = sample1.map((x1, i) => x1 - sample2[i]);
-        const meanDiff = differences.reduce((sum, d) => sum + d, 0) / n;
-        const sampleMean1 = sample1.reduce((sum, x) => sum + x, 0) / n;
-        const sampleMean2 = sample2.reduce((sum, x) => sum + x, 0) / n;
-        
-        // 计算样本标准差
-        const s1Variance = sample1.reduce((sum, x) => sum + Math.pow(x - sampleMean1, 2), 0) / (n - 1);
-        const s2Variance = sample2.reduce((sum, x) => sum + Math.pow(x - sampleMean2, 2), 0) / (n - 1);
-        const s1 = Math.sqrt(s1Variance);
-        const s2 = Math.sqrt(s2Variance);
-        
-        // 计算差值的标准差
-        const diffVariance = differences.reduce((sum, d) => sum + Math.pow(d - meanDiff, 2), 0) / (n - 1);
-        const diffStd = Math.sqrt(diffVariance);
-
-        // 计算检验统计量
-        const standardError = diffStd / Math.sqrt(n);
-        const tStatistic = (meanDiff - mu0Diff) / standardError;
-
-        // 计算p值
-        const pValue = this.calculatePValue(tStatistic, testType, df);
-
-        // 做出检验决策
-        const reject = pValue < alpha;
-
-        // 计算置信区间
-        const criticalValueForCI = this.getTCriticalValue(0.025, df);
-        const marginOfError = criticalValueForCI * standardError;
-        const ciLower = meanDiff - marginOfError;
-        const ciUpper = meanDiff + marginOfError;
-
-        // 更新显示
-        document.getElementById('sampleMean1').textContent = sampleMean1.toFixed(4);
-        document.getElementById('sampleMean2').textContent = sampleMean2.toFixed(4);
-        document.getElementById('sampleStd1').textContent = s1.toFixed(4);
-        document.getElementById('sampleStd2').textContent = s2.toFixed(4);
-        document.getElementById('meanDifference').textContent = meanDiff.toFixed(4);
-        document.getElementById('pooledStd').textContent = diffStd.toFixed(4);
-        document.getElementById('testStatistic').textContent = tStatistic.toFixed(4);
-        document.getElementById('degreesOfFreedom').textContent = typeof df === 'number' ? df.toFixed(2) : df;
-        document.getElementById('pValue').textContent = pValue.toFixed(4);
-        document.getElementById('testConclusion').innerHTML = reject ? 
-            '<span class="text-danger">拒绝H₀</span>' : 
-            '<span class="text-success">接受H₀</span>';
-        document.getElementById('confidenceInterval').textContent = 
-            `[${ciLower.toFixed(4)}, ${ciUpper.toFixed(4)}]`;
-
-        // 在图表上标记检验统计量
-        this.markTestStatisticOnChart(tStatistic, df);
-    }
-
-    performIndependentTest() {
-        const mu0Diff = parseFloat(document.getElementById('mu0Diff').value);
-        const trueMu1 = parseFloat(document.getElementById('trueMu1').value);
-        const trueMu2 = parseFloat(document.getElementById('trueMu2').value);
-        const trueSigma1 = parseFloat(document.getElementById('trueSigma1').value);
-        const trueSigma2 = parseFloat(document.getElementById('trueSigma2').value);
         const n1 = parseInt(document.getElementById('sampleSize1').value);
         const n2 = parseInt(document.getElementById('sampleSize2').value);
-        const alpha = parseFloat(document.getElementById('alpha').value);
+        const mu1 = parseFloat(document.getElementById('populationMean1').value);
+        const mu2 = parseFloat(document.getElementById('populationMean2').value);
+        const sigma1 = parseFloat(document.getElementById('populationStd1').value);
+        const sigma2 = parseFloat(document.getElementById('populationStd2').value);
+        const alpha = parseFloat(document.getElementById('significanceLevel').value);
         const testType = document.getElementById('testType').value;
+        const varianceHomogeneity = document.getElementById('varianceHomogeneity').value;
 
-        // 生成独立样本
-        const sample1 = this.generateNormalSample(trueMu1, trueSigma1, n1);
-        const sample2 = this.generateNormalSample(trueMu2, trueSigma2, n2);
+        // 生成样本
+        const sample1 = this.generateNormalSample(mu1, sigma1, n1);
+        const sample2 = this.generateNormalSample(mu2, sigma2, n2);
         
         const sampleMean1 = sample1.reduce((sum, x) => sum + x, 0) / n1;
         const sampleMean2 = sample2.reduce((sum, x) => sum + x, 0) / n2;
@@ -430,13 +298,9 @@ class TTestTwoSampleSimulator {
         const s1 = Math.sqrt(s1Squared);
         const s2 = Math.sqrt(s2Squared);
 
-        // 进行F检验判断方差齐性
-        const fTestResult = this.performFTest(s1Squared, s2Squared, n1, n2, 0.05);
-        const useEqualVariance = !fTestResult.reject; // 如果F检验不拒绝H0，则假设方差相等
-
         let tStatistic, df, standardError, pooledStd, testMethod;
 
-        if (useEqualVariance) {
+        if (varianceHomogeneity === 'yes') {
             // 等方差假设下的t检验
             pooledStd = Math.sqrt(((n1 - 1) * s1Squared + (n2 - 1) * s2Squared) / (n1 + n2 - 2));
             standardError = pooledStd * Math.sqrt(1/n1 + 1/n2);
@@ -454,7 +318,7 @@ class TTestTwoSampleSimulator {
             testMethod = "Welch's t检验";
         }
 
-        tStatistic = (meanDiff - mu0Diff) / standardError;
+        tStatistic = meanDiff / standardError;
 
         // 计算p值
         const pValue = this.calculatePValue(tStatistic, testType, df);
@@ -468,87 +332,84 @@ class TTestTwoSampleSimulator {
         const ciLower = meanDiff - marginOfError;
         const ciUpper = meanDiff + marginOfError;
 
-        // 更新显示
-        document.getElementById('sampleMean1').textContent = sampleMean1.toFixed(4);
-        document.getElementById('sampleMean2').textContent = sampleMean2.toFixed(4);
-        document.getElementById('sampleStd1').textContent = s1.toFixed(4);
-        document.getElementById('sampleStd2').textContent = s2.toFixed(4);
-        document.getElementById('meanDifference').textContent = meanDiff.toFixed(4);
-        document.getElementById('pooledStd').textContent = pooledStd.toFixed(4);
-        document.getElementById('testStatistic').textContent = tStatistic.toFixed(4);
-        document.getElementById('degreesOfFreedom').textContent = df;
-        document.getElementById('pValue').textContent = pValue.toFixed(4);
-        document.getElementById('testConclusion').innerHTML = reject ? 
-            '<span class="text-danger">拒绝H₀</span>' : 
-            '<span class="text-success">接受H₀</span>';
-        document.getElementById('confidenceInterval').textContent = 
-            `[${ciLower.toFixed(4)}, ${ciUpper.toFixed(4)}]`;
-
-        // 显示F检验结果和选择的检验方法
-        document.getElementById('fTestResult').innerHTML = 
-            `F检验: F=${fTestResult.fStatistic.toFixed(4)}, p=${fTestResult.pValue.toFixed(4)} → ${fTestResult.reject ? '拒绝等方差假设' : '接受等方差假设'}<br>` +
-            `检验方法: ${testMethod}`;
+        // 显示结果
+        this.displayResults({
+            sampleMean1, sampleMean2, s1, s2, s1Squared, s2Squared,
+            meanDiff, pooledStd, tStatistic, df, pValue, reject,
+            ciLower, ciUpper, testMethod, alpha
+        });
 
         // 在图表上标记检验统计量
         this.markTestStatisticOnChart(tStatistic, df);
     }
 
-    generatePairedSamples(mu1, mu2, sigma1, sigma2, rho, n) {
-        const sample1 = [];
-        const sample2 = [];
-        
-        for (let i = 0; i < n; i++) {
-            // 生成相关的双变量正态分布
-            const z1 = this.standardNormalRandom();
-            const z2 = this.standardNormalRandom();
+    displayResults(results) {
+        const {
+            sampleMean1, sampleMean2, s1, s2, s1Squared, s2Squared,
+            meanDiff, pooledStd, tStatistic, df, pValue, reject,
+            ciLower, ciUpper, testMethod, alpha
+        } = results;
+
+        const resultClass = reject ? 'alert-danger' : 'alert-success';
+        const conclusion = reject ? '拒绝原假设' : '不拒绝原假设';
+        const interpretation = reject ? 
+            '有足够证据表明两总体均值存在显著差异' : 
+            '没有足够证据表明两总体均值存在显著差异';
+
+        // 创建结果HTML，参考F检验的格式
+        const resultsHTML = `
+            <table class="table results-table mb-3">
+                <thead>
+                    <tr>
+                        <th colspan="3">样本统计量</th>
+                        <th colspan="3">检验统计量</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>样本1均值</strong><br>${sampleMean1.toFixed(4)}</td>
+                        <td><strong>样本1标准差</strong><br>${s1.toFixed(4)}</td>
+                        <td><strong>样本1方差</strong><br>s₁² = ${s1Squared.toFixed(4)}</td>
+                        <td><strong>t统计量</strong><br>${tStatistic.toFixed(4)}</td>
+                        <td><strong>自由度</strong><br>df = ${typeof df === 'number' ? (Number.isInteger(df) ? df.toString() : df.toFixed(2)) : df}</td>
+                        <td><strong>均值差</strong><br>x̄₁ - x̄₂ = ${meanDiff.toFixed(4)}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>样本2均值</strong><br>${sampleMean2.toFixed(4)}</td>
+                        <td><strong>样本2标准差</strong><br>${s2.toFixed(4)}</td>
+                        <td><strong>样本2方差</strong><br>s₂² = ${s2Squared.toFixed(4)}</td>
+                        <td><strong>p值</strong><br>${pValue.toFixed(6)}</td>
+                        <td><strong>显著性水平</strong><br>α = ${alpha}</td>
+                        <td><strong>检验方法</strong><br>${testMethod}</td>
+                    </tr>
+                </tbody>
+            </table>
             
-            const x1 = mu1 + sigma1 * z1;
-            const x2 = mu2 + sigma2 * (rho * z1 + Math.sqrt(1 - rho * rho) * z2);
-            
-            sample1.push(x1);
-            sample2.push(x2);
-        }
-        
-        return {sample1, sample2};
+            <div class="alert ${resultClass}">
+                <h6><i class="fas fa-gavel me-2"></i>检验结论</h6>
+                <p class="mb-1"><strong>${conclusion}</strong> (p = ${pValue.toFixed(6)} ${pValue < alpha ? '<' : '≥'} α = ${alpha})</p>
+                <p class="mb-1">${interpretation}</p>
+                <p class="mb-0"><strong>95%置信区间:</strong> [${ciLower.toFixed(4)}, ${ciUpper.toFixed(4)}]</p>
+            </div>
+        `;
+
+        document.getElementById('resultsContainer').innerHTML = resultsHTML;
     }
 
     markTestStatisticOnChart(tStatistic, df) {
         if (!this.chart) return;
 
-        // 移除之前的标记
-        this.chart.data.datasets = this.chart.data.datasets.filter(dataset => 
-            dataset.label !== '检验统计量' && dataset.label !== '检验统计量线');
-
-        // 添加检验统计量标记
-        if (tStatistic >= -4 && tStatistic <= 4) {
-            const yValue = this.tDistributionPDF(tStatistic, df);
-            
-            // 添加垂直线
-            this.chart.data.datasets.push({
-                label: '检验统计量线',
-                data: [{x: tStatistic, y: 0}, {x: tStatistic, y: yValue}],
-                borderColor: '#ffc107',
-                backgroundColor: 'transparent',
-                borderWidth: 3,
-                pointRadius: 0,
-                showLine: true,
-                tension: 0,
-                fill: false
-            });
-            
-            // 添加顶部标记点
-            this.chart.data.datasets.push({
-                label: '检验统计量',
-                data: [{x: tStatistic, y: yValue}],
-                borderColor: '#ffc107',
-                backgroundColor: '#ffc107',
-                pointRadius: 8,
-                pointHoverRadius: 10,
-                showLine: false,
-                type: 'scatter'
-            });
-        }
-
+        // 设置检验统计量位置，插件会使用这个值来绘制垂直线
+        this.chart.testStatisticPosition = tStatistic;
+        
+        // 保存检验结果供插件使用，包括tDistributionPDF方法
+        this.chart.testResults = { 
+            tStatistic, 
+            df,
+            tDistributionPDF: (x, degrees) => this.tDistributionPDF(x, degrees)
+        };
+        
+        // 更新图表以触发插件重绘
         this.chart.update('none');
     }
 
@@ -588,66 +449,19 @@ class TTestTwoSampleSimulator {
     }
 
     runSingleTest() {
-        const testDesign = document.getElementById('testDesign').value;
-        
-        if (testDesign === 'paired') {
-            this.runSinglePairedTest();
-        } else {
-            this.runSingleIndependentTest();
-        }
-    }
-
-    runSinglePairedTest() {
-        const mu0Diff = parseFloat(document.getElementById('mu0Diff').value);
-        const trueMu1 = parseFloat(document.getElementById('trueMu1').value);
-        const trueMu2 = parseFloat(document.getElementById('trueMu2').value);
-        const trueSigma1 = parseFloat(document.getElementById('trueSigma1').value);
-        const trueSigma2 = parseFloat(document.getElementById('trueSigma2').value);
-        const correlation = parseFloat(document.getElementById('correlation').value);
-        const n = parseInt(document.getElementById('sampleSize1').value);
-        const alpha = parseFloat(document.getElementById('alpha').value);
-        const testType = document.getElementById('testType').value;
-        const df = n - 1;
-
-        // 生成配对样本
-        const {sample1, sample2} = this.generatePairedSamples(trueMu1, trueMu2, trueSigma1, trueSigma2, correlation, n);
-        
-        // 计算差值
-        const differences = sample1.map((x1, i) => x1 - sample2[i]);
-        const meanDiff = differences.reduce((sum, d) => sum + d, 0) / n;
-        
-        // 计算差值的标准差
-        const diffVariance = differences.reduce((sum, d) => sum + Math.pow(d - meanDiff, 2), 0) / (n - 1);
-        const diffStd = Math.sqrt(diffVariance);
-
-        // 计算检验统计量和p值
-        const standardError = diffStd / Math.sqrt(n);
-        const tStatistic = (meanDiff - mu0Diff) / standardError;
-        const pValue = this.calculatePValue(tStatistic, testType, df);
-
-        // 记录结果
-        this.simulationResults.totalTests++;
-        this.simulationResults.pValues.push(pValue);
-        
-        if (pValue < alpha) {
-            this.simulationResults.rejections++;
-        }
-    }
-
-    runSingleIndependentTest() {
-        const mu0Diff = parseFloat(document.getElementById('mu0Diff').value);
-        const trueMu1 = parseFloat(document.getElementById('trueMu1').value);
-        const trueMu2 = parseFloat(document.getElementById('trueMu2').value);
-        const trueSigma1 = parseFloat(document.getElementById('trueSigma1').value);
-        const trueSigma2 = parseFloat(document.getElementById('trueSigma2').value);
         const n1 = parseInt(document.getElementById('sampleSize1').value);
         const n2 = parseInt(document.getElementById('sampleSize2').value);
-        const alpha = parseFloat(document.getElementById('alpha').value);
+        const mu1 = parseFloat(document.getElementById('populationMean1').value);
+        const mu2 = parseFloat(document.getElementById('populationMean2').value);
+        const sigma1 = parseFloat(document.getElementById('populationStd1').value);
+        const sigma2 = parseFloat(document.getElementById('populationStd2').value);
+        const alpha = parseFloat(document.getElementById('significanceLevel').value);
         const testType = document.getElementById('testType').value;
+        const varianceHomogeneity = document.getElementById('varianceHomogeneity').value;
 
-        // 生成独立样本
-        const sample1 = this.generateNormalSample(trueMu1, trueSigma1, n1);
-        const sample2 = this.generateNormalSample(trueMu2, trueSigma2, n2);
+        // 生成样本
+        const sample1 = this.generateNormalSample(mu1, sigma1, n1);
+        const sample2 = this.generateNormalSample(mu2, sigma2, n2);
         
         const sampleMean1 = sample1.reduce((sum, x) => sum + x, 0) / n1;
         const sampleMean2 = sample2.reduce((sum, x) => sum + x, 0) / n2;
@@ -657,13 +471,9 @@ class TTestTwoSampleSimulator {
         const s1Squared = sample1.reduce((sum, x) => sum + Math.pow(x - sampleMean1, 2), 0) / (n1 - 1);
         const s2Squared = sample2.reduce((sum, x) => sum + Math.pow(x - sampleMean2, 2), 0) / (n2 - 1);
 
-        // 进行F检验判断方差齐性
-        const fTestResult = this.performFTest(s1Squared, s2Squared, n1, n2, 0.05);
-        const useEqualVariance = !fTestResult.reject; // 如果F检验不拒绝H0，则假设方差相等
-
         let tStatistic, df, standardError;
 
-        if (useEqualVariance) {
+        if (varianceHomogeneity === 'yes') {
             // 等方差假设下的t检验
             const pooledVariance = ((n1 - 1) * s1Squared + (n2 - 1) * s2Squared) / (n1 + n2 - 2);
             standardError = Math.sqrt(pooledVariance * (1/n1 + 1/n2));
@@ -678,7 +488,7 @@ class TTestTwoSampleSimulator {
             df = numerator / denominator; // 保留小数，不取整
         }
 
-        tStatistic = (meanDiff - mu0Diff) / standardError;
+        tStatistic = meanDiff / standardError;
         const pValue = this.calculatePValue(tStatistic, testType, df);
 
         // 记录结果
@@ -691,31 +501,59 @@ class TTestTwoSampleSimulator {
     }
 
     updateSimulationResults() {
-        const rejectionRate = this.simulationResults.rejections / this.simulationResults.totalTests;
-        const avgPValue = this.simulationResults.pValues.reduce((sum, p) => sum + p, 0) / 
-                         this.simulationResults.pValues.length;
+        const rejectionRate = (this.simulationResults.rejections / this.simulationResults.totalTests * 100).toFixed(2);
+        const alpha = parseFloat(document.getElementById('significanceLevel').value);
+        const expectedRate = (alpha * 100).toFixed(2);
 
-        document.getElementById('rejectionCount').textContent = this.simulationResults.rejections;
-        document.getElementById('rejectionRate').textContent = (rejectionRate * 100).toFixed(2) + '%';
-        document.getElementById('avgPValue').textContent = avgPValue.toFixed(4);
+        const avgPValue = (this.simulationResults.pValues.reduce((sum, p) => sum + p, 0) / this.simulationResults.pValues.length).toFixed(4);
 
-        // 计算第二类错误率和检验功效
-        const mu0Diff = parseFloat(document.getElementById('mu0Diff').value);
-        const trueMu1 = parseFloat(document.getElementById('trueMu1').value);
-        const trueMu2 = parseFloat(document.getElementById('trueMu2').value);
-        const trueDiff = trueMu1 - trueMu2;
-
-        if (Math.abs(trueDiff - mu0Diff) < 0.001) {
-            // H0为真，无法计算检验功效和第二类错误率
-            document.getElementById('typeIIError').textContent = '-';
-            document.getElementById('power').textContent = '-';
+        // 计算检验功效
+        const mu1 = parseFloat(document.getElementById('populationMean1').value);
+        const mu2 = parseFloat(document.getElementById('populationMean2').value);
+        const isH0True = Math.abs(mu1 - mu2) < 0.001;
+        
+        let powerInfo = '';
+        if (isH0True) {
+            powerInfo = `
+                <strong>第一类错误率:</strong> ${rejectionRate}% (理论值: ${expectedRate}%)<br>
+                <strong>检验功效:</strong> 不适用 (H₀为真)
+            `;
         } else {
-            // H0为假，拒绝率就是检验功效，第二类错误率 = 1 - 检验功效
-            const power = rejectionRate;
-            const typeIIError = 1 - power;
-            document.getElementById('power').textContent = (power * 100).toFixed(2) + '%';
-            document.getElementById('typeIIError').textContent = (typeIIError * 100).toFixed(2) + '%';
+            powerInfo = `
+                <strong>检验功效:</strong> ${rejectionRate}%<br>
+                <strong>第二类错误率:</strong> ${(100 - parseFloat(rejectionRate)).toFixed(2)}%
+            `;
         }
+
+        const simulationResultsHTML = `
+            <div class="alert alert-info mt-3">
+                <h6><i class="fas fa-chart-bar me-2"></i>模拟结果 (${this.simulationResults.totalTests}次)</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>拒绝H₀次数:</strong> ${this.simulationResults.rejections}<br>
+                        <strong>拒绝率:</strong> ${rejectionRate}%<br>
+                        ${powerInfo}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>平均p值:</strong> ${avgPValue}<br>
+                        <strong>总体1均值:</strong> ${mu1}<br>
+                        <strong>总体2均值:</strong> ${mu2}<br>
+                        <strong>均值差:</strong> ${(mu1 - mu2).toFixed(3)}
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        ${isH0True ? 
+                          (Math.abs(parseFloat(rejectionRate) - parseFloat(expectedRate)) < 2 ? 
+                            '✓ 第一类错误率接近理论值，模拟结果正常' : 
+                            '⚠ 第一类错误率偏离理论值较大') :
+                          `✓ 检验功效: ${rejectionRate}% (总体1均值${mu1 > mu2 ? '大于' : '小于'}总体2均值)`}
+                    </small>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('resultsContainer').innerHTML += simulationResultsHTML;
     }
 
     resetSimulation() {
@@ -726,29 +564,27 @@ class TTestTwoSampleSimulator {
         };
 
         // 清空结果显示
-        document.getElementById('sampleMean1').textContent = '-';
-        document.getElementById('sampleMean2').textContent = '-';
-        document.getElementById('sampleStd1').textContent = '-';
-        document.getElementById('sampleStd2').textContent = '-';
-        document.getElementById('meanDifference').textContent = '-';
-        document.getElementById('pooledStd').textContent = '-';
-        document.getElementById('testStatistic').textContent = '-';
-        document.getElementById('degreesOfFreedom').textContent = '-';
-        document.getElementById('pValue').textContent = '-';
-        document.getElementById('testConclusion').textContent = '-';
-        document.getElementById('confidenceInterval').textContent = '-';
-        document.getElementById('rejectionCount').textContent = '-';
-        document.getElementById('rejectionRate').textContent = '-';
-        document.getElementById('typeIIError').textContent = '-';
-        document.getElementById('power').textContent = '-';
-        document.getElementById('avgPValue').textContent = '-';
-        document.getElementById('simulationStatus').textContent = '未开始';
+        document.getElementById('resultsContainer').innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                点击"生成样本并执行检验"开始分析
+            </div>
+        `;
+        
+        document.getElementById('simulationStatus').textContent = '就绪';
 
         // 重置图表
         if (this.chart) {
-            this.chart.data.datasets = this.chart.data.datasets.filter(dataset => 
-                dataset.label !== '检验统计量' && dataset.label !== '检验统计量线');
+            this.chart.testStatisticPosition = null;
+            this.chart.testResults = null;
+            this.testResults = null;
             this.chart.update('none');
+        }
+
+        // 移除模拟结果显示
+        const simulationResults = document.querySelector('.alert-info');
+        if (simulationResults && simulationResults.innerHTML.includes('模拟结果')) {
+            simulationResults.remove();
         }
     }
 
@@ -769,10 +605,6 @@ class TTestTwoSampleSimulator {
         
         const z = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
         return z * std + mean;
-    }
-
-    standardNormalRandom() {
-        return this.normalRandom(0, 1);
     }
 
     tDistributionPDF(x, df) {
@@ -943,90 +775,5 @@ class TTestTwoSampleSimulator {
         
         return sign * y;
     }
-
-    performFTest(s1Squared, s2Squared, n1, n2, alpha = 0.05) {
-        // F检验用于检验两个总体方差是否相等
-        // H0: σ1² = σ2²  vs  H1: σ1² ≠ σ2²
-        
-        // 计算F统计量（较大方差/较小方差）
-        let fStatistic, df1, df2;
-        if (s1Squared >= s2Squared) {
-            fStatistic = s1Squared / s2Squared;
-            df1 = n1 - 1;
-            df2 = n2 - 1;
-        } else {
-            fStatistic = s2Squared / s1Squared;
-            df1 = n2 - 1;
-            df2 = n1 - 1;
-        }
-        
-        // 计算p值（双尾检验）
-        const pValue = 2 * (1 - this.fCDF(fStatistic, df1, df2));
-        
-        // 做出检验决策
-        const reject = pValue < alpha;
-        
-        return {
-            fStatistic: fStatistic,
-            df1: df1,
-            df2: df2,
-            pValue: pValue,
-            reject: reject,
-            conclusion: reject ? '拒绝等方差假设' : '接受等方差假设'
-        };
-    }
-
-    fCDF(x, df1, df2) {
-        // F分布CDF的近似计算
-        // 使用Beta分布的关系: F(x; df1, df2) = I_{df1*x/(df1*x+df2)}(df1/2, df2/2)
-        
-        if (x <= 0) return 0;
-        if (x === Infinity) return 1;
-        
-        const t = (df1 * x) / (df1 * x + df2);
-        return this.incompleteBeta(t, df1/2, df2/2);
-    }
-
-    incompleteBeta(x, a, b) {
-        // 不完全Beta函数的近似计算
-        if (x <= 0) return 0;
-        if (x >= 1) return 1;
-        
-        // 使用连分数展开的近似
-        if (x > (a + 1) / (a + b + 2)) {
-            return 1 - this.incompleteBeta(1 - x, b, a);
-        }
-        
-        // 简化的近似计算
-        let result = 0;
-        const n = 50; // 迭代次数
-        
-        for (let k = 0; k <= n; k++) {
-            const term = this.binomialCoeff(n, k) * Math.pow(x, a + k) * Math.pow(1 - x, b);
-            result += term;
-        }
-        
-        return Math.min(1, Math.max(0, result / this.beta(a, b)));
-    }
-
-    binomialCoeff(n, k) {
-        if (k > n) return 0;
-        if (k === 0 || k === n) return 1;
-        
-        let result = 1;
-        for (let i = 1; i <= k; i++) {
-            result = result * (n - i + 1) / i;
-        }
-        return result;
-    }
-
-    beta(a, b) {
-        // Beta函数 B(a,b) = Γ(a)Γ(b)/Γ(a+b)
-        return Math.exp(this.logGamma(a) + this.logGamma(b) - this.logGamma(a + b));
-    }
 }
 
-// 初始化
-document.addEventListener('DOMContentLoaded', () => {
-    new TTestTwoSampleSimulator();
-});

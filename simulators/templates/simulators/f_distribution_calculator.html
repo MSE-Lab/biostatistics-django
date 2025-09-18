@@ -1,0 +1,290 @@
+{% extends 'simulators/base.html' %}
+{% load static %}
+
+{% block title %}F分布计算器{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/simulators.css' %}">
+<style>
+    .simulator-container {
+        width: 100%;
+        margin: 0;
+        padding: 15px;
+        min-height: 100vh;
+    }
+    
+    .control-panel {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .visualization-area {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        min-height: 400px;
+    }
+    
+    .calculator-panel {
+        background: #e8f4fd;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 5px;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 5px;
+        border: 1px solid #ced4da;
+        padding: 8px 12px;
+    }
+    
+    .btn {
+        border-radius: 5px;
+        padding: 8px 16px;
+        margin: 5px;
+    }
+    
+    .calculation-section {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        border: 1px solid #dee2e6;
+    }
+    
+    .result-display {
+        background: #f8f9fa;
+        border-radius: 5px;
+        padding: 10px;
+        margin-top: 10px;
+        font-family: 'Courier New', monospace;
+        font-size: 1.1em;
+        font-weight: bold;
+        color: #495057;
+    }
+    
+    .distribution-info {
+        background: #f8d7da;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .distribution-info h6 {
+        color: #721c24;
+        margin-bottom: 10px;
+    }
+    
+    .distribution-info p {
+        margin-bottom: 5px;
+        color: #424242;
+        font-size: 0.9em;
+    }
+    
+    .df-selector {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        border: 1px solid #dee2e6;
+    }
+    
+    .df-button {
+        margin: 2px;
+        padding: 5px 10px;
+        font-size: 0.9em;
+    }
+    
+    .df-group {
+        margin-bottom: 15px;
+    }
+    
+    .df-group h6 {
+        color: #495057;
+        margin-bottom: 8px;
+        font-size: 0.9em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="simulator-container">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="text-center mb-4">
+                <i class="fas fa-chart-line me-2"></i>
+                F分布计算器
+            </h1>
+            <p class="text-center text-muted mb-4">
+                显示不同自由度下的F分布密度曲线，计算分位数函数值和累积分布函数值
+            </p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- 左侧控制面板 -->
+        <div class="col-md-4">
+            <div class="control-panel">
+                <h5 class="mb-3">
+                    <i class="fas fa-sliders-h me-2"></i>分布参数
+                </h5>
+                
+                <div class="form-group">
+                    <label for="df1" class="form-label">分子自由度 (df₁)</label>
+                    <input type="number" class="form-control" id="df1" value="5" min="1" max="50" step="1">
+                    <small class="text-muted">范围: 1-50</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="df2" class="form-label">分母自由度 (df₂)</label>
+                    <input type="number" class="form-control" id="df2" value="10" min="1" max="50" step="1">
+                    <small class="text-muted">范围: 1-50</small>
+                </div>
+                
+                <!-- 快速选择自由度 -->
+                <div class="df-selector">
+                    <h6 class="mb-2">快速选择</h6>
+                    
+                    <div class="df-group">
+                        <h6>分子自由度 (df₁)</h6>
+                        <button type="button" class="btn btn-outline-danger btn-sm df-button" data-df="1" data-type="df1">1</button>
+                        <button type="button" class="btn btn-outline-danger btn-sm df-button" data-df="2" data-type="df1">2</button>
+                        <button type="button" class="btn btn-outline-danger btn-sm df-button" data-df="5" data-type="df1">5</button>
+                        <button type="button" class="btn btn-outline-danger btn-sm df-button" data-df="10" data-type="df1">10</button>
+                    </div>
+                    
+                    <div class="df-group">
+                        <h6>分母自由度 (df₂)</h6>
+                        <button type="button" class="btn btn-outline-danger btn-sm df-button" data-df="5" data-type="df2">5</button>
+                        <button type="button" class="btn btn-outline-danger btn-sm df-button" data-df="10" data-type="df2">10</button>
+                        <button type="button" class="btn btn-outline-danger btn-sm df-button" data-df="20" data-type="df2">20</button>
+                        <button type="button" class="btn btn-outline-danger btn-sm df-button" data-df="30" data-type="df2">30</button>
+                    </div>
+                </div>
+                
+                <!-- 分布信息 -->
+                <div class="distribution-info">
+                    <h6><i class="fas fa-info-circle me-2"></i>F分布特性</h6>
+                    <p><strong>均值:</strong> df₂/(df₂-2) (当 df₂ > 2)</p>
+                    <p><strong>方差:</strong> 复杂公式 (当 df₂ > 4)</p>
+                    <p id="currentMean"><strong>当前均值:</strong> 1.25</p>
+                    <p><strong>形状:</strong> 右偏，非对称</p>
+                    <p><strong>支撑:</strong> [0, +∞)</p>
+                    <p><strong>用途:</strong> 方差比检验</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧可视化和计算面板 -->
+        <div class="col-md-8">
+            <!-- 分布可视化 -->
+            <div class="visualization-area">
+                <h5 class="mb-3">
+                    <i class="fas fa-chart-line me-2 text-danger"></i>概率密度函数
+                </h5>
+                <canvas id="distributionChart" style="max-height: 350px;"></canvas>
+            </div>
+            
+            <!-- 计算功能 -->
+            <div class="calculator-panel">
+                <h5 class="mb-3">
+                    <i class="fas fa-calculator me-2 text-success"></i>分布函数计算
+                </h5>
+                
+                <div class="row">
+                    <!-- 累积分布函数 -->
+                    <div class="col-md-6">
+                        <div class="calculation-section">
+                            <h6 class="text-primary">累积分布函数 (CDF)</h6>
+                            <p class="small text-muted">计算 P(F ≤ x)，其中 F ~ F(df₁, df₂)</p>
+                            
+                            <div class="form-group">
+                                <label for="cdfInput" class="form-label">F值</label>
+                                <input type="number" class="form-control" id="cdfInput" value="1" min="0" step="0.01">
+                            </div>
+                            
+                            <button type="button" class="btn btn-primary btn-sm w-100" id="calculateCDF">
+                                计算 CDF
+                            </button>
+                            
+                            <div class="result-display" id="cdfResult">
+                                P(F ≤ 1) = 0.5000
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 分位数函数 -->
+                    <div class="col-md-6">
+                        <div class="calculation-section">
+                            <h6 class="text-success">分位数函数 (Quantile)</h6>
+                            <p class="small text-muted">计算 F值，使得 P(F ≤ x) = p</p>
+                            
+                            <div class="form-group">
+                                <label for="quantileInput" class="form-label">概率 (p)</label>
+                                <input type="number" class="form-control" id="quantileInput" value="0.95" min="0.001" max="0.999" step="0.001">
+                            </div>
+                            
+                            <button type="button" class="btn btn-success btn-sm w-100" id="calculateQuantile">
+                                计算分位数
+                            </button>
+                            
+                            <div class="result-display" id="quantileResult">
+                                F₀.₉₅ = 3.3258
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 常用临界值表 -->
+                <div class="mt-4">
+                    <h6 class="text-danger">
+                        <i class="fas fa-table me-2"></i>常用临界值 (右尾检验)
+                    </h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered" id="criticalValuesTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>显著性水平</th>
+                                    <th>α = 0.10</th>
+                                    <th>α = 0.05</th>
+                                    <th>α = 0.01</th>
+                                    <th>α = 0.001</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>临界值</strong></td>
+                                    <td id="critical_010">-</td>
+                                    <td id="critical_005">-</td>
+                                    <td id="critical_001">-</td>
+                                    <td id="critical_0001">-</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'vendor/chartjs/chart.js' %}"></script>
+<script src="{% static 'js/f_distribution_calculator.js' %}"></script>
+{% endblock %}
