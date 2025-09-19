@@ -195,11 +195,23 @@ echo "🗄️ 配置SQLite数据库..."
 echo "使用SQLite数据库，无需额外配置"
 echo -e "${GREEN}✅ 数据库配置完成${NC}"
 
+# 创建日志目录（必须在数据库迁移之前）
+echo "📝 创建日志目录..."
+mkdir -p logs
+chown $REAL_USER:$REAL_USER logs
+touch logs/django.log
+chmod 664 logs/django.log
+chown $REAL_USER:$REAL_USER logs/django.log
+echo -e "${GREEN}✅ 日志目录创建完成${NC}"
+
 # 数据库迁移
 echo "🗄️ 执行数据库迁移..."
 sudo -u $REAL_USER bash -c "
     cd $PROJECT_DIR
     source venv/bin/activate
+    # 先生成迁移文件
+    python manage.py makemigrations --settings=biostatistics_course.settings_production
+    # 然后执行迁移
     python manage.py migrate --settings=biostatistics_course.settings_production
 "
 
@@ -210,14 +222,6 @@ sudo -u $REAL_USER bash -c "
     source venv/bin/activate
     python manage.py collectstatic --noinput --settings=biostatistics_course.settings_production
 "
-
-# 创建日志目录
-echo "📝 创建日志目录..."
-mkdir -p logs
-chown $REAL_USER:$REAL_USER logs
-touch logs/django.log
-chmod 664 logs/django.log
-chown $REAL_USER:$REAL_USER logs/django.log
 
 # 设置文件权限
 echo "🔒 设置文件权限..."
@@ -235,14 +239,15 @@ Description=Biostatistics Django Application
 After=network.target
 
 [Service]
-Type=notify
+Type=forking
 User=$REAL_USER
 Group=$REAL_USER
 WorkingDirectory=$PROJECT_DIR
-Environment=PATH=$PROJECT_DIR/venv/bin
+Environment=PATH=$PROJECT_DIR/venv/bin:/usr/local/bin:/usr/bin:/bin
 Environment=DJANGO_SETTINGS_MODULE=biostatistics_course.settings_production
-ExecStart=$PROJECT_DIR/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 biostatistics_course.wsgi:application
+ExecStart=/bin/bash -c 'cd $PROJECT_DIR && source venv/bin/activate && gunicorn --workers 3 --bind 127.0.0.1:8000 --daemon --pid /var/run/biostatistics-django.pid biostatistics_course.wsgi:application'
 ExecReload=/bin/kill -s HUP \$MAINPID
+PIDFile=/var/run/biostatistics-django.pid
 Restart=on-failure
 RestartSec=5
 
