@@ -1,0 +1,13 @@
+# 生产环境依赖文件
+Django>=4.2.24,<5.0
+Pillow>=11.3.0
+
+# 生产环境推荐的额外依赖
+gunicorn>=21.2.0  # WSGI服务器
+psycopg2-binary>=2.9.0  # PostgreSQL适配器
+whitenoise>=6.6.0  # 静态文件服务
+
+# 可选依赖
+# redis>=5.0.0  # 缓存和会话存储
+# celery>=5.3.0  # 异步任务队列
+# django-cors-headers>=4.3.0  # CORS支持
