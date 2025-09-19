@@ -129,43 +129,57 @@ python manage.py runserver
 
 ### 生产环境部署
 
-⚠️ **重要安全提醒**: 在部署到生产环境前，请务必完成以下安全配置：
+⚠️ **重要安全提醒**: 在部署到生产环境前，请务必完成安全修复！
 
-1. **修改settings.py中的安全设置**:
-```python
-# 生成新的SECRET_KEY
-SECRET_KEY = 'your-new-secret-key-here'
+#### 支持的操作系统
+- **Ubuntu/Debian**: 使用 `deploy.sh`
+- **CentOS/RHEL**: 使用 `deploy_centos.sh`
+- **其他Linux发行版**: 参考手动部署指南
 
-# 关闭调试模式
-DEBUG = False
+#### 快速部署
 
-# 设置允许的主机
-ALLOWED_HOSTS = ['your-domain.com', 'your-server-ip']
-
-# 添加安全中间件配置
-SECURE_SSL_REDIRECT = True
-SECURE_HSTS_SECONDS = 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
-SECURE_CONTENT_TYPE_NOSNIFF = True
-SECURE_BROWSER_XSS_FILTER = True
+**Ubuntu/Debian系统**:
+```bash
+# 1. 完成安全修复
+python security_check.py
+# 2. 自动部署
+sudo ./deploy.sh
 ```
 
-2. **数据库配置**:
-   - 生产环境建议使用PostgreSQL或MySQL
-   - 配置数据库连接池
-   - 定期备份数据库
-
-3. **静态文件配置**:
-```python
-STATIC_ROOT = '/path/to/static/'
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+**CentOS/RHEL系统**:
+```bash
+# 1. 完成安全修复
+python security_check.py
+# 2. 自动部署
+sudo ./deploy_centos.sh
 ```
 
-4. **Web服务器配置**:
+#### 部署前必须完成的安全修复
+
+1. **立即修复高危安全问题**:
+```bash
+# 快速安全修复
+cp .env.example .env
+python -c "from django.core.management.utils import get_random_secret_key; print('DJANGO_SECRET_KEY=' + get_random_secret_key())" >> .env
+chmod 600 .env
+python create_admin_secure.py
+rm create_admin.py create_teacher_user.py
+```
+
+2. **使用生产环境配置**:
+   - 使用 `settings_production.py`
+   - 配置PostgreSQL数据库
+   - 设置正确的ALLOWED_HOSTS
+
+3. **Web服务器配置**:
    - 使用Nginx + Gunicorn
    - 配置SSL证书
    - 设置防火墙规则
+
+#### 详细部署指南
+- Ubuntu/Debian: 参考 `DEPLOYMENT_GUIDE.md`
+- CentOS/RHEL: 参考 `CENTOS_DEPLOYMENT.md`
+- 安全检查: 参考 `SECURITY_CHECKLIST.md`
 
 ## 主要模块说明
 
