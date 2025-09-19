@@ -95,28 +95,18 @@ echo "📦 安装系统依赖..."
 if [ "$OS_VERSION" = "7" ]; then
     # CentOS 7
     yum groupinstall -y "Development Tools"
-    yum install -y git nginx postgresql-server postgresql-contrib postgresql-devel
+    yum install -y git nginx
     yum install -y gcc gcc-c++ make openssl-devel libffi-devel
     yum install -y libjpeg-devel zlib-devel freetype-devel lcms2-devel
     yum install -y libwebp-devel tcl-devel tk-devel
     
-    # 初始化PostgreSQL
-    postgresql-setup initdb
-    systemctl enable postgresql
-    systemctl start postgresql
-    
 elif [ "$OS_VERSION" = "8" ] || [ "$OS_VERSION" = "9" ]; then
     # CentOS 8/9
     dnf groupinstall -y "Development Tools"
-    dnf install -y git nginx postgresql-server postgresql-contrib postgresql-devel
+    dnf install -y git nginx
     dnf install -y gcc gcc-c++ make openssl-devel libffi-devel
     dnf install -y libjpeg-devel zlib-devel freetype-devel lcms2-devel
     dnf install -y libwebp-devel tcl-devel tk-devel
-    
-    # 初始化PostgreSQL
-    postgresql-setup --initdb
-    systemctl enable postgresql
-    systemctl start postgresql
 fi
 
 echo -e "${GREEN}✅ 系统依赖安装完成${NC}"
@@ -138,8 +128,21 @@ echo "🔥 配置防火墙..."
 if systemctl is-active --quiet firewalld; then
     firewall-cmd --permanent --add-service=http
     firewall-cmd --permanent --add-service=https
+    firewall-cmd --permanent --add-port=8001/tcp
     firewall-cmd --reload
-    echo -e "${GREEN}✅ 防火墙配置完成${NC}"
+    echo -e "${GREEN}✅ 防火墙配置完成（开放8001端口）${NC}"
+fi
+
+# 获取脚本所在目录
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+echo "脚本目录: $SCRIPT_DIR"
+
+# 检查当前目录的.env文件
+if [ ! -f "$SCRIPT_DIR/.env" ]; then
+    echo -e "${RED}错误: .env 文件不存在！${NC}"
+    echo "请在脚本目录 $SCRIPT_DIR 中创建 .env 文件"
+    echo "可以复制 .env.example 为 .env 并填入正确的配置"
+    exit 1
 fi
 
 # 创建项目目录
@@ -149,13 +152,17 @@ echo "📁 设置项目目录: $PROJECT_DIR"
 mkdir -p $PROJECT_DIR
 chown $REAL_USER:$REAL_USER $PROJECT_DIR
 
+# 复制项目文件到目标目录
+echo "📋 复制项目文件..."
+rsync -av --exclude='venv' --exclude='__pycache__' --exclude='*.pyc' "$SCRIPT_DIR/" "$PROJECT_DIR/"
+chown -R $REAL_USER:$REAL_USER $PROJECT_DIR
+
 # 切换到项目目录
 cd $PROJECT_DIR
 
-# 检查.env文件
+# 再次检查.env文件（应该已经复制过来了）
 if [ ! -f ".env" ]; then
-    echo -e "${RED}错误: .env 文件不存在！${NC}"
-    echo "请复制 .env.example 为 .env 并填入正确的配置"
+    echo -e "${RED}错误: .env 文件复制失败！${NC}"
     exit 1
 fi
 
@@ -177,42 +184,21 @@ fi
 # 激活虚拟环境并安装依赖
 echo "📦 安装Python依赖..."
 sudo -u $REAL_USER bash -c "
+    cd $PROJECT_DIR
     source venv/bin/activate
     pip install --upgrade pip
     pip install -r requirements.txt
 "
 
-# 配置PostgreSQL数据库
-echo "🗄️ 配置PostgreSQL数据库..."
-DB_NAME=${DB_NAME:-biostatistics_course}
-DB_USER=${DB_USER:-biostatistics_user}
-DB_PASSWORD=${DB_PASSWORD:-$(openssl rand -base64 32)}
-
-# 创建数据库用户和数据库
-sudo -u postgres psql << EOF
-CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';
-CREATE DATABASE $DB_NAME OWNER $DB_USER;
-GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;
-\q
-EOF
-
-# 更新.env文件中的数据库配置
-if ! grep -q "DB_NAME=" .env; then
-    echo "DB_NAME=$DB_NAME" >> .env
-    echo "DB_USER=$DB_USER" >> .env
-    echo "DB_PASSWORD=$DB_PASSWORD" >> .env
-    echo "DB_HOST=localhost" >> .env
-    echo "DB_PORT=5432" >> .env
-fi
-
+# 配置SQLite数据库
+echo "🗄️ 配置SQLite数据库..."
+echo "使用SQLite数据库，无需额外配置"
 echo -e "${GREEN}✅ 数据库配置完成${NC}"
-echo "数据库名: $DB_NAME"
-echo "数据库用户: $DB_USER"
-echo "数据库密码: $DB_PASSWORD"
 
 # 数据库迁移
 echo "🗄️ 执行数据库迁移..."
 sudo -u $REAL_USER bash -c "
+    cd $PROJECT_DIR
     source venv/bin/activate
     python manage.py migrate --settings=biostatistics_course.settings_production
 "
@@ -220,6 +206,7 @@ sudo -u $REAL_USER bash -c "
 # 收集静态文件
 echo "📁 收集静态文件..."
 sudo -u $REAL_USER bash -c "
+    cd $PROJECT_DIR
     source venv/bin/activate
     python manage.py collectstatic --noinput --settings=biostatistics_course.settings_production
 "
@@ -281,9 +268,46 @@ fi
 # 配置Nginx
 echo "🌐 配置Nginx..."
 cat > /etc/nginx/conf.d/biostatistics-django.conf << EOF
+# 默认80端口配置
 server {
     listen 80;
     server_name localhost _;
+
+    client_max_body_size 100M;
+
+    # 安全头
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+
+    location /static/ {
+        alias $PROJECT_DIR/staticfiles/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location /media/ {
+        alias $PROJECT_DIR/media/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+}
+
+# 8001端口配置（用于远程访问）
+server {
+    listen 8001;
+    server_name 10.50.0.198 _;
 
     client_max_body_size 100M;
 
@@ -340,15 +364,14 @@ DATE=$(date +%Y%m%d_%H%M%S)
 
 mkdir -p $BACKUP_DIR
 
-# 备份数据库
-source .env
-pg_dump -h ${DB_HOST:-localhost} -U ${DB_USER} -d ${DB_NAME} > $BACKUP_DIR/db_backup_$DATE.sql
+# 备份SQLite数据库
+cp db.sqlite3 $BACKUP_DIR/db_backup_$DATE.sqlite3
 
 # 备份媒体文件
 tar -czf $BACKUP_DIR/media_backup_$DATE.tar.gz media/
 
 # 删除7天前的备份
-find $BACKUP_DIR -name "*.sql" -mtime +7 -delete
+find $BACKUP_DIR -name "*.sqlite3" -mtime +7 -delete
 find $BACKUP_DIR -name "*.tar.gz" -mtime +7 -delete
 
 echo "备份完成: $DATE"
@@ -402,8 +425,9 @@ echo "   操作系统: CentOS/RHEL $OS_VERSION"
 echo "   项目目录: $PROJECT_DIR"
 echo "   运行用户: $REAL_USER"
 echo "   服务名称: biostatistics-django"
-echo "   访问地址: http://$(hostname -I | awk '{print $1}')"
-echo "   数据库: PostgreSQL"
+echo "   本地访问: http://localhost"
+echo "   远程访问: http://10.50.0.198:8001"
+echo "   数据库: SQLite"
 echo ""
 echo "🔧 常用命令:"
 echo "   查看服务状态: systemctl status biostatistics-django"
@@ -413,9 +437,8 @@ echo "   手动备份: cd $PROJECT_DIR && ./backup.sh"
 echo "   设置SSL: ./setup_ssl.sh your-domain.com"
 echo ""
 echo "🔒 数据库信息:"
-echo "   数据库名: $DB_NAME"
-echo "   用户名: $DB_USER"
-echo "   密码: $DB_PASSWORD"
+echo "   数据库类型: SQLite"
+echo "   数据库文件: db.sqlite3"
 echo ""
 echo -e "${YELLOW}⚠️  重要提醒:${NC}"
 echo "1. 请使用 python create_admin_secure.py 创建管理员账户"

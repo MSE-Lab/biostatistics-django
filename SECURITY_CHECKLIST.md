@@ -36,14 +36,11 @@ cp .env.example .env
 # 编辑 .env 文件，填入实际值
 ```
 
-### 3. 数据库迁移到PostgreSQL（推荐）
+### 3. 数据库配置（SQLite）
 ```bash
-# 安装PostgreSQL
-sudo apt-get install postgresql postgresql-contrib
-
-# 创建数据库和用户
-sudo -u postgres createdb biostatistics_course
-sudo -u postgres createuser biostatistics_user
+# 使用SQLite数据库，无需额外配置
+# 确保数据库文件权限正确
+chmod 644 db.sqlite3
 
 # 导出现有数据
 python manage.py dumpdata > data_backup.json

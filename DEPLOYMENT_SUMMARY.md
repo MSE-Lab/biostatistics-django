@@ -128,7 +128,8 @@ sudo ./deploy_centos.sh
 # 查看服务状态
 sudo systemctl status biostatistics-django
 sudo systemctl status nginx
-sudo systemctl status postgresql
+# 检查SQLite数据库状态
+ls -la db.sqlite3
 
 # 重启服务
 sudo systemctl restart biostatistics-django

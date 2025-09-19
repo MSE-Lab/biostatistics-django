@@ -21,9 +21,9 @@ DEBUG = False
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    # 添加您的域名和服务器IP
+    '10.50.0.198',
+    # 添加您的域名
     # 'your-domain.com',
-    # 'your-server-ip',
 ]
 
 # Application definition
@@ -69,23 +69,23 @@ TEMPLATES = [
 WSGI_APPLICATION = "biostatistics_course.wsgi.application"
 
 # Database
-# 生产环境建议使用PostgreSQL
+# 使用SQLite数据库（适合中小型项目）
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get('DB_NAME', 'biostatistics_course'),
-        "USER": os.environ.get('DB_USER', 'postgres'),
-        "PASSWORD": os.environ.get('DB_PASSWORD', ''),
-        "HOST": os.environ.get('DB_HOST', 'localhost'),
-        "PORT": os.environ.get('DB_PORT', '5432'),
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 
-# 如果没有PostgreSQL，可以继续使用SQLite（不推荐用于生产）
+# 如果需要使用PostgreSQL，可以启用以下配置：
 # DATABASES = {
 #     "default": {
-#         "ENGINE": "django.db.backends.sqlite3",
-#         "NAME": BASE_DIR / "db.sqlite3",
+#         "ENGINE": "django.db.backends.postgresql",
+#         "NAME": os.environ.get('DB_NAME', 'biostatistics_course'),
+#         "USER": os.environ.get('DB_USER', 'postgres'),
+#         "PASSWORD": os.environ.get('DB_PASSWORD', ''),
+#         "HOST": os.environ.get('DB_HOST', 'localhost'),
+#         "PORT": os.environ.get('DB_PORT', '5432'),
 #     }
 # }
 

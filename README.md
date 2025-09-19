@@ -168,7 +168,7 @@ rm create_admin.py create_teacher_user.py
 
 2. **使用生产环境配置**:
    - 使用 `settings_production.py`
-   - 配置PostgreSQL数据库
+   - 配置SQLite数据库（无需额外配置）
    - 设置正确的ALLOWED_HOSTS
 
 3. **Web服务器配置**:

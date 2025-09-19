@@ -31,7 +31,7 @@ echo -e "${GREEN}✅ Python版本检查通过: $python_version${NC}"
 
 # 检查必要的系统包
 echo "📋 检查系统依赖..."
-required_packages=("git" "nginx" "postgresql")
+required_packages=("git" "nginx")
 for package in "${required_packages[@]}"; do
     if ! command -v $package &> /dev/null; then
         echo -e "${YELLOW}警告: $package 未安装，请手动安装${NC}"
@@ -201,21 +201,21 @@ fi
 echo "💾 创建备份脚本..."
 tee backup.sh > /dev/null << 'EOF'
 #!/bin/bash
-# 数据库备份脚本
+# SQLite数据库备份脚本
 
 BACKUP_DIR="/var/backups/biostatistics-django"
 DATE=$(date +%Y%m%d_%H%M%S)
 
 mkdir -p $BACKUP_DIR
 
-# 备份数据库
-python manage.py dumpdata --settings=biostatistics_course.settings_production > $BACKUP_DIR/db_backup_$DATE.json
+# 备份SQLite数据库
+cp db.sqlite3 $BACKUP_DIR/db_backup_$DATE.sqlite3
 
 # 备份媒体文件
 tar -czf $BACKUP_DIR/media_backup_$DATE.tar.gz media/
 
 # 删除7天前的备份
-find $BACKUP_DIR -name "*.json" -mtime +7 -delete
+find $BACKUP_DIR -name "*.sqlite3" -mtime +7 -delete
 find $BACKUP_DIR -name "*.tar.gz" -mtime +7 -delete
 
 echo "备份完成: $DATE"
@@ -233,7 +233,8 @@ echo ""
 echo "📋 部署信息:"
 echo "   项目目录: $PROJECT_DIR"
 echo "   服务名称: biostatistics-django"
-echo "   访问地址: http://localhost"
+echo "   本地访问: http://localhost"
+echo "   远程访问: http://10.50.0.198:8001"
 echo ""
 echo "🔧 常用命令:"
 echo "   查看服务状态: sudo systemctl status biostatistics-django"

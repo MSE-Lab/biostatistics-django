@@ -57,9 +57,9 @@ sudo yum groupinstall -y "Development Tools"  # CentOS 7
 sudo dnf groupinstall -y "Development Tools"  # CentOS 8/9
 
 # Web服务器和数据库
-sudo yum install -y nginx postgresql-server postgresql-contrib postgresql-devel  # CentOS 7
+sudo yum install -y nginx  # CentOS 7
 # 或
-sudo dnf install -y nginx postgresql-server postgresql-contrib postgresql-devel  # CentOS 8/9
+sudo dnf install -y nginx  # CentOS 8/9
 
 # 图像处理库依赖
 sudo yum install -y libjpeg-devel zlib-devel freetype-devel lcms2-devel libwebp-devel  # CentOS 7
@@ -67,21 +67,11 @@ sudo yum install -y libjpeg-devel zlib-devel freetype-devel lcms2-devel libwebp-
 sudo dnf install -y libjpeg-devel zlib-devel freetype-devel lcms2-devel libwebp-devel  # CentOS 8/9
 ```
 
-#### 4. 配置PostgreSQL
+#### 4. 配置数据库（SQLite）
 
 ```bash
-# 初始化数据库
-sudo postgresql-setup initdb  # CentOS 7
-# 或
-sudo postgresql-setup --initdb  # CentOS 8/9
-
-# 启动并启用PostgreSQL
-sudo systemctl enable postgresql
-sudo systemctl start postgresql
-
-# 创建数据库和用户
-sudo -u postgres psql << EOF
-CREATE USER biostatistics_user WITH PASSWORD 'your_secure_password';
+# 使用SQLite数据库，无需额外配置
+echo "SQLite数据库会自动创建"
 CREATE DATABASE biostatistics_course OWNER biostatistics_user;
 GRANT ALL PRIVILEGES ON DATABASE biostatistics_course TO biostatistics_user;
 \q
@@ -342,15 +332,11 @@ sudo systemctl stop firewalld
 
 5. **数据库连接问题**
 ```bash
-# 检查PostgreSQL状态
-sudo systemctl status postgresql
+# 检查SQLite数据库
+ls -la db.sqlite3
 
 # 测试数据库连接
-sudo -u postgres psql -l
-
-# 检查数据库配置
-sudo cat /var/lib/pgsql/data/postgresql.conf
-sudo cat /var/lib/pgsql/data/pg_hba.conf
+python manage.py dbshell --settings=biostatistics_course.settings_production
 ```
 
 ## 性能优化
@@ -380,11 +366,11 @@ keepalive_timeout 65;
 client_max_body_size 100M;
 ```
 
-### 3. PostgreSQL优化
+### 3. SQLite优化
 
 ```bash
-# 编辑PostgreSQL配置
-sudo nano /var/lib/pgsql/data/postgresql.conf
+# SQLite数据库优化（通过Django设置）
+# 在settings_production.py中已包含相关优化
 
 # 调整以下参数
 shared_buffers = 256MB

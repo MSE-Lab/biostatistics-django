@@ -296,14 +296,12 @@ sudo chmod 600 /var/www/biostatistics-django/.env
 
 ```bash
 # 检查PostgreSQL状态
-sudo systemctl status postgresql
+# 检查SQLite数据库
+ls -la db.sqlite3
+chmod 644 db.sqlite3
 
-# 启动PostgreSQL
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-
-# 测试连接
-sudo -u postgres psql -l
+# 测试数据库连接
+python manage.py dbshell --settings=biostatistics_course.settings_production
 ```
 
 ## 部署后验证
@@ -312,7 +310,8 @@ sudo -u postgres psql -l
 # 1. 检查服务状态
 sudo systemctl status biostatistics-django
 sudo systemctl status nginx
-sudo systemctl status postgresql
+# 检查SQLite数据库
+ls -la db.sqlite3
 
 # 2. 检查端口监听
 sudo ss -tlnp | grep :80

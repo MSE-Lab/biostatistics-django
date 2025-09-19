@@ -79,18 +79,15 @@ sudo ./deploy.sh
 sudo apt update && sudo apt upgrade -y
 
 # 安装必要软件
-sudo apt install -y python3 python3-pip python3-venv nginx postgresql postgresql-contrib
+sudo apt install -y python3 python3-pip python3-venv nginx
 ```
 
-#### 2. 数据库配置（推荐PostgreSQL）
+#### 2. 数据库配置（使用SQLite）
 
 ```bash
-# 创建数据库用户和数据库
-sudo -u postgres createuser --interactive biostatistics_user
-sudo -u postgres createdb biostatistics_course -O biostatistics_user
-
-# 设置用户密码
-sudo -u postgres psql -c "ALTER USER biostatistics_user PASSWORD 'your_secure_password';"
+# SQLite数据库无需额外配置
+# 项目会自动创建 db.sqlite3 文件
+echo "使用SQLite数据库，无需额外配置"
 ```
 
 #### 3. 项目部署
