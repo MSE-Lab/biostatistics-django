@@ -167,18 +167,6 @@ STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
    - 配置SSL证书
    - 设置防火墙规则
 
-## 默认账户
-
-### 管理员账户
-- 用户名: admin
-- 密码: Zxy&429-
-
-### 教师账户
-- 用户名: teacher
-- 密码: teacher123
-
-⚠️ **安全提醒**: 部署前请务必修改所有默认密码！
-
 ## 主要模块说明
 
 ### 用户系统
@@ -251,7 +239,7 @@ A: 检查浏览器控制台错误，确保JavaScript文件正确加载
 ## 联系方式
 
 - 项目负责人: 职晓阳
-- 邮箱: [联系邮箱]
+- 邮箱: xyzhi@ynu.edu.cn
 - 机构: 云南大学生命科学学院
 
 ## 更新日志
