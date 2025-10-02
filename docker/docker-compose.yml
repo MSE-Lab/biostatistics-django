@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: biostatistics_web
+    env_file:
+      - ../.env.production
+    environment:
+      - DJANGO_SETTINGS_MODULE=biostatistics_course.settings_production
+    command: ["/app/docker/web/entrypoint.sh"]
+    volumes:
+      - ../db.sqlite3:/app/db.sqlite3
+      - ../media:/app/media
+      - ../staticfiles:/app/staticfiles
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: biostatistics_nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../staticfiles:/var/www/staticfiles:ro
+      - ../media:/var/www/media:ro
+    ports:
+      - "8001:80"
+    depends_on:
+      - web
+    restart: unless-stopped
+
+# 如需使用备用 Dockerfile，请将上方 build 切换为：
+#    build:
+#      context: ..
+#      dockerfile: docker/Dockerfile
