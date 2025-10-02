@@ -156,10 +156,8 @@ python manage.py runserver
 - .env.production（项目根目录）
 
 二、准备与环境变量
-1) 在项目根目录准备持久化目录与数据库文件（首次部署可先创建空文件/目录）
-- mkdir -p media staticfiles
-- touch db.sqlite3
-2) 编辑 .env.production（务必设置强随机秘钥）
+
+编辑 .env.production（务必设置强随机秘钥）
 - 生成并写入强随机密钥（注意写入 .env.production，而不是 .env）：
   ```bash
   python -c "from django.core.management.utils import get_random_secret_key; print('DJANGO_SECRET_KEY=' + get_random_secret_key())" >> .env.production
