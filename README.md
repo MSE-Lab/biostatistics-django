@@ -109,16 +109,33 @@ python manage.py createsuperuser
 ```
 
 5. **初始化数据**
+- 本机开发环境：
 ```bash
-# 创建论坛分类
-python create_forum_categories.py
+# 创建管理员（建议使用更安全的 secure 版本，会提示输入并做校验）
+python create_admin_secure.py
 
-# 创建教学班级
+# 创建教师用户（或使用 create_teacher_secure.py 提供更多校验）
+python create_teacher_user.py
+
+# 初始化专业班/教学班
 python create_initial_classes.py
 
-# 创建教师用户
-python create_teacher_user.py
+# 初始化讨论区分类
+python create_forum_categories.py
 ```
+
+- Docker 开发/测试环境（容器内执行以上脚本）：
+```bash
+cd docker
+docker compose exec web python create_admin_secure.py
+docker compose exec web python create_teacher_user.py
+docker compose exec web python create_initial_classes.py
+docker compose exec web python create_forum_categories.py
+```
+
+说明：
+- create_* 脚本用于开发/测试阶段快速初始化数据，便于登录 /admin/ 和演示主要功能
+- 生产环境不建议使用这些脚本直接改账户，请通过 /admin/ 后台或规范流程进行管理
 
 6. **启动开发服务器**
 ```bash
@@ -127,59 +144,158 @@ python manage.py runserver
 
 访问 http://127.0.0.1:8000 查看应用。
 
-### 生产环境部署
+### Docker Compose 部署（推荐）
 
-⚠️ **重要安全提醒**: 在部署到生产环境前，请务必完成安全修复！
+本项目提供基于 Docker Compose 的生产部署方案（CentOS 8.5 验证通过），通过 Nginx 反向代理对外开放 8001 端口，不修改项目代码。
 
-#### 支持的操作系统
-- **Ubuntu/Debian**: 使用 `deploy.sh`
-- **CentOS/RHEL**: 使用 `deploy_centos.sh`
-- **其他Linux发行版**: 参考手动部署指南
+一、部署文件清单
+- docker/docker-compose.yml
+- docker/nginx.conf
+- docker/web/entrypoint.sh
+- docker/Dockerfile（备用构建文件）
+- .env.production（项目根目录）
 
-#### 快速部署
+二、准备与环境变量
+1) 在项目根目录准备持久化目录与数据库文件（首次部署可先创建空文件/目录）
+- mkdir -p media staticfiles
+- touch db.sqlite3
+2) 编辑 .env.production（务必设置强随机秘钥）
+- 生成并写入强随机密钥（注意写入 .env.production，而不是 .env）：
+  ```bash
+  python -c "from django.core.management.utils import get_random_secret_key; print('DJANGO_SECRET_KEY=' + get_random_secret_key())" >> .env.production
+  ```
+- 若已存在该键，请确保只保留一行 DJANGO_SECRET_KEY，避免重复冲突
+- 其他推荐项：
+  - DEBUG=0
+  - 可选：TZ=Asia/Shanghai
+  - 可选：LANG=C.UTF-8、LC_ALL=C.UTF-8（用于消除容器 locale 警告）
 
-**Ubuntu/Debian系统**:
-```bash
-# 1. 完成安全修复
-python security_check.py
-# 2. 自动部署
-sudo ./deploy.sh
-```
+说明：无需在 settings 中改 ALLOWED_HOSTS。Nginx 已将请求头统一为 Host=localhost，并同步 Referer/Origin，避免 DisallowedHost 与 CSRF 校验问题。
 
-**CentOS/RHEL系统**:
-```bash
-# 1. 完成安全修复
-python security_check.py
-# 2. 自动部署
-sudo ./deploy_centos.sh
-```
+三、启动与防火墙
+1) 放行 8001 端口
+- firewall-cmd --permanent --add-port=8001/tcp; firewall-cmd --reload
+2) 启动
+- cd docker
+- docker compose up -d --build
+若出现 web 容器找不到 entrypoint.sh，可将 docker-compose.yml 的 build 切换到 docker/Dockerfile 后重试。
 
-#### 部署前必须完成的安全修复
+四、初始化管理员
+- docker compose exec web python manage.py createsuperuser --settings=biostatistics_course.settings_production
 
-1. **立即修复高危安全问题**:
-```bash
-# 快速安全修复
-cp .env.example .env
-python -c "from django.core.management.utils import get_random_secret_key; print('DJANGO_SECRET_KEY=' + get_random_secret_key())" >> .env
-chmod 600 .env
-python create_admin_secure.py
-rm create_admin.py create_teacher_user.py
-```
+五、访问与验证
+- 前台与后台： http://你的服务器IP:8001/ 和 http://你的服务器IP:8001/admin/
+- 查看日志：
+  - docker compose logs -f web
+  - docker compose logs -f nginx
 
-2. **使用生产环境配置**:
-   - 使用 `settings_production.py`
-   - 配置SQLite数据库（无需额外配置）
-   - 设置正确的ALLOWED_HOSTS
+六、数据持久化与备份
+- 持久化目录：db.sqlite3、media/、staticfiles/（staticfiles 可随时通过 collectstatic 重建）
+- 建议定期备份 db.sqlite3 与 media/ 目录
 
-3. **Web服务器配置**:
-   - 使用Nginx + Gunicorn
-   - 配置SSL证书
-   - 设置防火墙规则
+七、常见问题
+- 502/Bad Gateway：检查 web 是否正常（docker compose logs -f web）
+- 静态不加载：检查 staticfiles 是否生成、Nginx 路径是否指向 /var/www/staticfiles
+- CSRF 失败：已在 Nginx 统一 Host/Referer/Origin；若仍失败，清理浏览器 Cookie 后重试或检查 Nginx 配置是否最新
+- 用户已存在：使用 changepassword 或提升现有用户为管理员
 
-#### 详细部署指南
-- Ubuntu/Debian: 参考 `DEPLOYMENT_GUIDE.md`
-- CentOS/RHEL: 参考 `CENTOS_DEPLOYMENT.md`
-- 安全检查: 参考 `SECURITY_CHECKLIST.md`
+#### HTTPS 部署
+
+生产上建议启用 HTTPS（TLS 终止在 Nginx，后端仍走 HTTP）。无需修改项目代码，仅为 Nginx 挂载证书并新增 443 server。
+
+方案A：使用已有正式证书（推荐）
+1) 准备证书文件
+   - 将证书放到项目 docker/certs/ 目录（示例）：
+     - docker/certs/fullchain.pem
+     - docker/certs/privkey.pem
+   - 或直接将宿主证书目录挂载到容器 /etc/nginx/certs
+
+2) 在 docker/docker-compose.yml 中为 nginx 服务挂载证书目录
+   volumes:
+     - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+     - ../staticfiles:/var/www/staticfiles:ro
+     - ../media:/var/www/media:ro
+     - ./certs:/etc/nginx/certs:ro   # 新增
+
+3) 在 docker/nginx.conf 增加 443 server（示例）
+   你可以在文件末尾添加如下配置（80 跳转到 443，443 终止 TLS 并转发到 web:8000）：
+   ```
+   # 可选：HTTP 全部跳转到 HTTPS
+   server {
+       listen 80;
+       server_name _;
+       return 301 https://$host$request_uri;
+   }
+
+   # 443 HTTPS
+   server {
+       listen 443 ssl http2;
+       server_name _;
+
+       ssl_certificate     /etc/nginx/certs/fullchain.pem;
+       ssl_certificate_key /etc/nginx/certs/privkey.pem;
+
+       client_max_body_size 100M;
+
+       add_header X-Frame-Options "SAMEORIGIN" always;
+       add_header X-Content-Type-Options "nosniff" always;
+       add_header X-XSS-Protection "1; mode=block" always;
+
+       location /static/ {
+           alias /var/www/staticfiles/;
+           expires 30d;
+           add_header Cache-Control "public, immutable";
+       }
+
+       location /media/ {
+           alias /var/www/media/;
+           expires 30d;
+           add_header Cache-Control "public, immutable";
+       }
+
+       location / {
+           proxy_pass http://web:8000;
+
+           # 统一后端看到的来源，避免 DisallowedHost/CSRF
+           proxy_set_header Host localhost;
+           proxy_set_header Referer https://localhost$uri$is_args$args;
+           proxy_set_header Origin https://localhost;
+
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto https;
+
+           proxy_connect_timeout 60s;
+           proxy_send_timeout 60s;
+           proxy_read_timeout 60s;
+       }
+   }
+   ```
+
+4) 端口映射
+   - 如希望对外仍使用 8001 提供 HTTPS：将 nginx 的端口映射从 "8001:80" 改为 "8001:443"
+   - 或开放标准 443：映射为 "443:443" 并在防火墙放行 443/tcp
+
+5) 重载
+   - cd docker && docker compose up -d --build
+
+方案B：自签名证书（仅测试）
+1) 生成自签名证书
+   ```
+   cd docker
+   mkdir -p certs
+   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+     -keyout certs/privkey.pem -out certs/fullchain.pem \
+     -subj "/CN=localhost"
+   ```
+2) 参照方案A的挂载与 nginx.conf 配置，重启后通过 https 访问（浏览器会提示不受信任）
+
+可选的 Django 安全项（当前无需改代码也可工作）
+- 如允许后续改 settings_production，可开启：
+  - SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+  - SESSION_COOKIE_SECURE = True
+  - CSRF_COOKIE_SECURE = True
+  - SECURE_SSL_REDIRECT = True
 
 ## 主要模块说明
 
