@@ -7,6 +7,14 @@ cd /app
 : "${DJANGO_SETTINGS_MODULE:=biostatistics_course.settings_production}"
 export DJANGO_SETTINGS_MODULE
 
+# 确保必要目录与文件存在（避免日志与静态目录导致启动失败）
+mkdir -p /app/logs || true
+touch /app/logs/django.log || true
+chmod 664 /app/logs/django.log || true
+
+mkdir -p /app/media || true
+mkdir -p /app/staticfiles || true
+
 if [ -z "${DJANGO_SECRET_KEY:-}" ]; then
   echo "WARN: DJANGO_SECRET_KEY is not set. Please set it in .env.production for production security."
 fi
