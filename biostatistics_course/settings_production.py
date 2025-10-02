@@ -21,9 +21,9 @@ DEBUG = False
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    '10.50.0.198',
-    # 添加您的域名
+    # 添加您的域名或服务器IP
     # 'your-domain.com',
+    # 'your-server-ip',
 ]
 
 # Application definition

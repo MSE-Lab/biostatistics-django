@@ -14,6 +14,51 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# SELinux 配置函数
+configure_selinux() {
+    echo -e "${YELLOW}⚙️  正在配置SELinux权限...${NC}"
+
+    # 检查SELinux是否启用
+    if command -v getenforce >/dev/null 2>&1 && [ "$(getenforce)" != "Disabled" ]; then
+        echo "SELinux 状态: $(getenforce)"
+
+        echo "安装SELinux管理工具 (policycoreutils-python-utils)..."
+        if [ "$OS_VERSION" = "7" ]; then
+            yum install -y policycoreutils-python
+        else
+            dnf install -y policycoreutils-python-utils
+        fi
+
+        echo "设置SELinux布尔值 (允许Web服务器进行网络连接)..."
+        setsebool -P httpd_can_network_connect 1
+
+        echo "为项目文件设置永久SELinux上下文..."
+        # 暂时禁用错误退出，因为如果上下文已存在，semanage会报错
+        set +e
+        
+        # 1. 默认给项目文件设置通用的、只读的httpd上下文
+        semanage fcontext -a -t httpd_sys_content_t "$PROJECT_DIR(/.*)?"
+        
+        # 2. 为需要写入的目录和文件设置可读写上下文
+        semanage fcontext -a -t httpd_sys_rw_content_t "$PROJECT_DIR/db.sqlite3"
+        semanage fcontext -a -t httpd_sys_rw_content_t "$PROJECT_DIR/logs(/.*)?"
+        semanage fcontext -a -t httpd_sys_rw_content_t "$PROJECT_DIR/media(/.*)?"
+
+        # 3. 为gunicorn可执行文件设置正确的上下文
+        semanage fcontext -a -t bin_t "$PROJECT_DIR/venv/bin/gunicorn"
+        
+        # 重新启用错误退出
+        set -e
+
+        echo "应用SELinux上下文..."
+        restorecon -Rv "$PROJECT_DIR"
+
+        echo -e "${GREEN}✅ SELinux配置完成${NC}"
+    else
+        echo "SELinux已禁用或未安装，跳过配置。"
+    fi
+}
+
 # 检测CentOS版本
 if [ -f /etc/redhat-release ]; then
     CENTOS_VERSION=$(rpm -q --queryformat '%{VERSION}' centos-release 2>/dev/null || echo "unknown")
@@ -49,7 +94,12 @@ if [ "$REAL_USER" = "root" ]; then
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         exit 1
     fi
-    REAL_USER="nginx"  # 使用nginx用户作为默认用户
+    # 检查项目目录的实际所有者
+    if [ -d "/var/www/biostatistics-django" ]; then
+        REAL_USER=$(stat -c '%U' /var/www/biostatistics-django 2>/dev/null || echo "nginx")
+    else
+        REAL_USER="nginx"  # 使用nginx用户作为默认用户
+    fi
 fi
 
 echo "将使用用户: $REAL_USER"
@@ -111,17 +161,7 @@ fi
 
 echo -e "${GREEN}✅ 系统依赖安装完成${NC}"
 
-# 配置SELinux
-echo "🔒 配置SELinux..."
-if command -v getenforce &> /dev/null; then
-    if [ "$(getenforce)" = "Enforcing" ]; then
-        echo "SELinux处于强制模式，配置相关策略..."
-        setsebool -P httpd_can_network_connect 1
-        setsebool -P httpd_can_network_relay 1
-        setsebool -P httpd_execmem 1
-        echo -e "${GREEN}✅ SELinux策略配置完成${NC}"
-    fi
-fi
+
 
 # 配置防火墙
 echo "🔥 配置防火墙..."
@@ -156,6 +196,11 @@ chown $REAL_USER:$REAL_USER $PROJECT_DIR
 echo "📋 复制项目文件..."
 rsync -av --exclude='venv' --exclude='__pycache__' --exclude='*.pyc' "$SCRIPT_DIR/" "$PROJECT_DIR/"
 chown -R $REAL_USER:$REAL_USER $PROJECT_DIR
+
+# 修复wsgi.py以强制使用生产设置
+echo "🔧 修复 WSGI 配置以使用生产设置..."
+# 注释掉可能导致加载错误开发设置的行
+sed -i "/os.environ.setdefault(\"DJANGO_SETTINGS_MODULE\", \"biostatistics_course.settings\")/s/^/# /" "$PROJECT_DIR/biostatistics_course/wsgi.py"
 
 # 切换到项目目录
 cd $PROJECT_DIR
@@ -231,6 +276,9 @@ chmod -R 755 media/ || true
 chmod -R 644 logs/
 chmod 600 .env
 
+# 调用SELinux配置函数
+configure_selinux
+
 # 创建systemd服务文件
 echo "⚙️ 创建systemd服务..."
 cat > /etc/systemd/system/biostatistics-django.service << EOF
@@ -239,17 +287,19 @@ Description=Biostatistics Django Application
 After=network.target
 
 [Service]
-Type=forking
+Type=exec
 User=$REAL_USER
 Group=$REAL_USER
 WorkingDirectory=$PROJECT_DIR
+EnvironmentFile=$PROJECT_DIR/.env
 Environment=PATH=$PROJECT_DIR/venv/bin:/usr/local/bin:/usr/bin:/bin
 Environment=DJANGO_SETTINGS_MODULE=biostatistics_course.settings_production
-ExecStart=/bin/bash -c 'cd $PROJECT_DIR && source venv/bin/activate && gunicorn --workers 3 --bind 127.0.0.1:8000 --daemon --pid /var/run/biostatistics-django.pid biostatistics_course.wsgi:application'
+ExecStart=$PROJECT_DIR/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 biostatistics_course.wsgi:application
 ExecReload=/bin/kill -s HUP \$MAINPID
-PIDFile=/var/run/biostatistics-django.pid
 Restart=on-failure
 RestartSec=5
+TimeoutStartSec=60
+TimeoutStopSec=30
 
 [Install]
 WantedBy=multi-user.target
@@ -265,8 +315,8 @@ sleep 3
 if systemctl is-active --quiet biostatistics-django; then
     echo -e "${GREEN}✅ Django服务启动成功${NC}"
 else
-    echo -e "${RED}❌ Django服务启动失败${NC}"
-    systemctl status biostatistics-django
+    echo -e "${RED}❌ Django服务启动失败. 显示最近的日志:${NC}"
+    journalctl -u biostatistics-django.service -n 20 --no-pager
     exit 1
 fi
 
@@ -312,7 +362,7 @@ server {
 # 8001端口配置（用于远程访问）
 server {
     listen 8001;
-    server_name 10.50.0.198 _;
+    server_name _;
 
     client_max_body_size 100M;
 
@@ -431,7 +481,7 @@ echo "   项目目录: $PROJECT_DIR"
 echo "   运行用户: $REAL_USER"
 echo "   服务名称: biostatistics-django"
 echo "   本地访问: http://localhost"
-echo "   远程访问: http://10.50.0.198:8001"
+echo "   远程访问: http://$(hostname -I | awk '{print $1}'):8001 或 http://localhost:8001"
 echo "   数据库: SQLite"
 echo ""
 echo "🔧 常用命令:"
