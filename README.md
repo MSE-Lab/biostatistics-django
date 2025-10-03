@@ -70,7 +70,9 @@ biostatistics-django/
 │   ├── css/                # 样式文件
 │   ├── js/                 # JavaScript文件
 │   └── images/             # 图片资源
+├── staticfiles/            # 静态文件
 ├── media/                  # 媒体文件
+├── staticfiles/            # Docker部署
 └── manage.py               # Django管理脚本
 ```
 
@@ -158,7 +160,7 @@ python manage.py runserver
 二、准备与环境变量
 
 编辑 .env.production（务必设置强随机秘钥）
-- 生成并写入强随机密钥（注意写入 .env.production，而不是 .env）：
+- 生成并写入强随机密钥：
   ```bash
   python -c "from django.core.management.utils import get_random_secret_key; print('DJANGO_SECRET_KEY=' + get_random_secret_key())" >> .env.production
   ```
