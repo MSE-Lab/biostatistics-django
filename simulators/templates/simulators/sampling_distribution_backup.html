@@ -1,0 +1,236 @@
+{% extends 'simulators/base.html' %}
+{% load static %}
+
+{% block title %}抽样分布模拟器{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>抽样分布模拟器</h2>
+                <a href="{% url 'simulators:index' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>返回模拟器首页
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 控制面板 -->
+        <div class="col-lg-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">参数设置</h5>
+                </div>
+                <div class="card-body">
+                    <!-- 总体分布选择 -->
+                    <div class="mb-4">
+                        <h6>总体分布</h6>
+                        <select id="populationDistribution" class="form-select mb-3">
+                            <option value="normal">正态分布</option>
+                            <option value="uniform">均匀分布</option>
+                            <option value="exponential">指数分布</option>
+                            <option value="bimodal">双峰分布</option>
+                        </select>
+                        
+                        <!-- 分布参数 -->
+                        <div id="distributionParams">
+                            <div class="mb-2">
+                                <label for="param1" class="form-label" id="param1Label">均值 (μ)</label>
+                                <input type="range" class="form-range" id="param1" min="0" max="10" value="5" step="0.1">
+                                <span id="param1Value" class="fw-bold">5.0</span>
+                            </div>
+                            <div class="mb-2">
+                                <label for="param2" class="form-label" id="param2Label">标准差 (σ)</label>
+                                <input type="range" class="form-range" id="param2" min="0.5" max="5" value="1.5" step="0.1">
+                                <span id="param2Value" class="fw-bold">1.5</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 抽样参数 -->
+                    <div class="mb-4">
+                        <h6>抽样设置</h6>
+                        <div class="mb-3">
+                            <label for="sampleSize" class="form-label">样本量 (n)</label>
+                            <input type="range" class="form-range" id="sampleSize" min="1" max="100" value="30" step="1">
+                            <div class="d-flex justify-content-between">
+                                <small>1</small>
+                                <span id="sampleSizeValue" class="fw-bold">30</span>
+                                <small>100</small>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="numSamples" class="form-label">样本数量</label>
+                            <input type="range" class="form-range" id="numSamples" min="10" max="1000" value="100" step="10">
+                            <div class="d-flex justify-content-between">
+                                <small>10</small>
+                                <span id="numSamplesValue" class="fw-bold">100</span>
+                                <small>1000</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="animationSpeed" class="form-label">动画速度</label>
+                            <input type="range" class="form-range" id="animationSpeed" min="1" max="10" value="5" step="1">
+                            <div class="d-flex justify-content-between">
+                                <small>慢</small>
+                                <span id="animationSpeedValue" class="fw-bold">5</span>
+                                <small>快</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 控制按钮 -->
+                    <div class="mb-4">
+                        <h6>控制操作</h6>
+                        <div class="d-grid gap-2">
+                            <button id="startBtn" class="btn btn-success">
+                                <i class="fas fa-play me-2"></i>开始抽样
+                            </button>
+                            <button id="pauseBtn" class="btn btn-warning" disabled>
+                                <i class="fas fa-pause me-2"></i>暂停
+                            </button>
+                            <button id="resetBtn" class="btn btn-danger">
+                                <i class="fas fa-redo me-2"></i>重置
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 实时统计 -->
+                    <div class="mb-4">
+                        <h6>实时统计</h6>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="text-center p-2 bg-light rounded">
+                                    <div class="fw-bold text-primary" id="completedSamples">0</div>
+                                    <small>已完成样本</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center p-2 bg-light rounded">
+                                    <div class="fw-bold text-success" id="currentMean">--</div>
+                                    <small>当前样本均值</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center p-2 bg-light rounded">
+                                    <div class="fw-bold text-info" id="samplingMean">--</div>
+                                    <small>抽样分布均值</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center p-2 bg-light rounded">
+                                    <div class="fw-bold text-warning" id="samplingStd">--</div>
+                                    <small>抽样分布标准差</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 理论说明 -->
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-2"></i>理论背景</h6>
+                        <p class="mb-0 small">
+                            中心极限定理：当样本量足够大时，样本均值的抽样分布趋向于正态分布，
+                            均值等于总体均值，标准差等于总体标准差除以√n。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 模拟器主体 -->
+        <div class="col-lg-9">
+            <div class="row">
+                <!-- 总体分布 -->
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">总体分布</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <canvas id="populationCanvas" width="400" height="300" class="w-100"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 当前样本 -->
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">当前样本 <span id="currentSampleInfo">(n=30)</span></h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <canvas id="sampleCanvas" width="400" height="300" class="w-100"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 抽样分布 -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">样本均值的抽样分布</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="samplingDistributionChart" width="800" height="400"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 理论对比 -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">理论 vs 实际对比</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h4 class="text-primary" id="theoreticalMean">--</h4>
+                                        <p class="mb-0">理论均值</p>
+                                        <small class="text-muted">μ</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h4 class="text-success" id="actualMean">--</h4>
+                                        <p class="mb-0">实际均值</p>
+                                        <small class="text-muted">x̄</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h4 class="text-info" id="theoreticalSE">--</h4>
+                                        <p class="mb-0">理论标准误</p>
+                                        <small class="text-muted">σ/√n</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h4 class="text-warning" id="actualSE">--</h4>
+                                        <p class="mb-0">实际标准误</p>
+                                        <small class="text-muted">s/√n</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/sampling_distribution.js' %}"></script>
+{% endblock %}

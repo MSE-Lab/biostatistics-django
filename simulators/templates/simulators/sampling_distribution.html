@@ -3,168 +3,467 @@
 
 {% block title %}抽样分布模拟器{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/simulators.css' %}">
+<style>
+    .simulator-container {
+        width: 100%;
+        margin: 0;
+        padding: 15px;
+        min-height: 100vh;
+    }
+    
+    .control-panel {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .visualization-area {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        min-height: 400px;
+    }
+    
+    .results-panel {
+        background: #e8f4fd;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 5px;
+    }
+    
+    .form-control, .form-select, .form-range {
+        border-radius: 5px;
+        border: 1px solid #ced4da;
+    }
+    
+    .btn-success {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+        border-radius: 25px;
+        padding: 10px 30px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .btn-warning {
+        background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+        border: none;
+        border-radius: 25px;
+        padding: 10px 30px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-warning:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .btn-danger {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        border: none;
+        border-radius: 25px;
+        padding: 10px 30px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .parameter-section {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        margin: 15px 0;
+        border-radius: 0 5px 5px 0;
+    }
+    
+    .section-title {
+        font-weight: 600;
+        color: #856404;
+        margin-bottom: 8px;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin: 15px 0;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        border-left: 4px solid #007bff;
+    }
+    
+    .stat-value {
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    .theory-info {
+        background: #d4edda;
+        border-left: 4px solid #28a745;
+        padding: 15px;
+        margin: 15px 0;
+        border-radius: 0 5px 5px 0;
+    }
+    
+    .info-title {
+        font-weight: 600;
+        color: #155724;
+        margin-bottom: 8px;
+    }
+    
+    .info-content {
+        color: #155724;
+        line-height: 1.5;
+        font-size: 0.9rem;
+    }
+    
+    .card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .card-header {
+        background: #0a4989;
+        color: white;
+        font-weight: 600;
+        border-radius: 10px 10px 0 0 !important;
+        padding: 15px 20px;
+    }
+    
+    .card-body {
+        padding: 20px;
+    }
+    
+    .range-display {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 5px;
+    }
+    
+    .range-value {
+        font-weight: bold;
+        color: #007bff;
+        font-size: 1.1rem;
+    }
+    
+    .param-value {
+        font-weight: bold;
+        color: #007bff;
+        margin-left: 10px;
+    }
+    
+    .comparison-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+    }
+    
+    .comparison-stat-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-top: 4px solid #007bff;
+    }
+    
+    .comparison-stat-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        margin-bottom: 8px;
+    }
+    
+    .comparison-stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-bottom: 5px;
+    }
+    
+    .comparison-stat-formula {
+        color: #6c757d;
+        font-size: 0.8rem;
+        font-style: italic;
+    }
+    
+    #populationCanvas, #sampleCanvas, #samplingDistributionChart {
+        border-radius: 5px;
+        border: 1px solid #dee2e6;
+        max-width: 100%;
+        height: auto;
+    }
+    
+    /* 修复高DPI显示器上canvas文字模糊问题 */
+    #populationCanvas, #sampleCanvas {
+        width: 100% !important;
+        height: auto !important;
+        max-width: 400px;
+        max-height: 300px;
+    }
+    
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+        .simulator-container {
+            padding: 10px;
+        }
+        
+        .control-panel, .visualization-area, .results-panel {
+            padding: 15px;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .comparison-stats {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
+<div class="simulator-container">
     <div class="row">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>抽样分布模拟器</h2>
-                <a href="{% url 'simulators:index' %}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-2"></i>返回模拟器首页
-                </a>
-            </div>
+            <h1 class="text-center mb-4">
+                <i class="fas fa-chart-line me-2"></i>
+                抽样分布模拟器
+            </h1>
+            <p class="text-center text-muted mb-4">
+                通过模拟抽样过程，理解中心极限定理和抽样分布的性质
+            </p>
         </div>
     </div>
 
     <div class="row">
         <!-- 控制面板 -->
-        <div class="col-lg-3">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">参数设置</h5>
-                </div>
-                <div class="card-body">
-                    <!-- 总体分布选择 -->
-                    <div class="mb-4">
-                        <h6>总体分布</h6>
-                        <select id="populationDistribution" class="form-select mb-3">
+        <div class="col-md-3">
+            <div class="control-panel">
+                <h4 class="mb-3">
+                    <i class="fas fa-sliders-h me-2"></i>
+                    参数设置
+                </h4>
+                
+                <!-- 总体分布选择 -->
+                <div class="parameter-section">
+                    <div class="section-title">总体分布</div>
+                    <div class="form-group">
+                        <select id="populationDistribution" class="form-select">
                             <option value="normal">正态分布</option>
                             <option value="uniform">均匀分布</option>
                             <option value="exponential">指数分布</option>
                             <option value="bimodal">双峰分布</option>
                         </select>
-                        
-                        <!-- 分布参数 -->
-                        <div id="distributionParams">
-                            <div class="mb-2">
-                                <label for="param1" class="form-label" id="param1Label">均值 (μ)</label>
-                                <input type="range" class="form-range" id="param1" min="0" max="10" value="5" step="0.1">
-                                <span id="param1Value" class="fw-bold">5.0</span>
-                            </div>
-                            <div class="mb-2">
-                                <label for="param2" class="form-label" id="param2Label">标准差 (σ)</label>
-                                <input type="range" class="form-range" id="param2" min="0.5" max="5" value="1.5" step="0.1">
-                                <span id="param2Value" class="fw-bold">1.5</span>
-                            </div>
+                    </div>
+                    
+                    <!-- 分布参数 -->
+                    <div id="distributionParams">
+                        <div class="form-group">
+                            <label for="param1" class="form-label" id="param1Label">均值 (μ)</label>
+                            <input type="range" class="form-range" id="param1" min="0" max="10" value="5" step="0.1">
+                            <span id="param1Value" class="param-value">5.0</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="param2" class="form-label" id="param2Label">标准差 (σ)</label>
+                            <input type="range" class="form-range" id="param2" min="0.5" max="5" value="1.5" step="0.1">
+                            <span id="param2Value" class="param-value">1.5</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 抽样参数 -->
+                <div class="parameter-section">
+                    <div class="section-title">抽样设置</div>
+                    <div class="form-group">
+                        <label for="sampleSize" class="form-label">样本量 (n)</label>
+                        <input type="range" class="form-range" id="sampleSize" min="1" max="100" value="30" step="1">
+                        <div class="range-display">
+                            <small>1</small>
+                            <span id="sampleSizeValue" class="range-value">30</span>
+                            <small>100</small>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="numSamples" class="form-label">样本数量</label>
+                        <input type="range" class="form-range" id="numSamples" min="10" max="1000" value="100" step="10">
+                        <div class="range-display">
+                            <small>10</small>
+                            <span id="numSamplesValue" class="range-value">100</span>
+                            <small>1000</small>
                         </div>
                     </div>
 
-                    <!-- 抽样参数 -->
-                    <div class="mb-4">
-                        <h6>抽样设置</h6>
-                        <div class="mb-3">
-                            <label for="sampleSize" class="form-label">样本量 (n)</label>
-                            <input type="range" class="form-range" id="sampleSize" min="1" max="100" value="30" step="1">
-                            <div class="d-flex justify-content-between">
-                                <small>1</small>
-                                <span id="sampleSizeValue" class="fw-bold">30</span>
-                                <small>100</small>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="numSamples" class="form-label">样本数量</label>
-                            <input type="range" class="form-range" id="numSamples" min="10" max="1000" value="100" step="10">
-                            <div class="d-flex justify-content-between">
-                                <small>10</small>
-                                <span id="numSamplesValue" class="fw-bold">100</span>
-                                <small>1000</small>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="animationSpeed" class="form-label">动画速度</label>
-                            <input type="range" class="form-range" id="animationSpeed" min="1" max="10" value="5" step="1">
-                            <div class="d-flex justify-content-between">
-                                <small>慢</small>
-                                <span id="animationSpeedValue" class="fw-bold">5</span>
-                                <small>快</small>
-                            </div>
+                    <div class="form-group">
+                        <label for="animationSpeed" class="form-label">动画速度</label>
+                        <input type="range" class="form-range" id="animationSpeed" min="1" max="10" value="5" step="1">
+                        <div class="range-display">
+                            <small>慢</small>
+                            <span id="animationSpeedValue" class="range-value">5</span>
+                            <small>快</small>
                         </div>
                     </div>
+                </div>
 
-                    <!-- 控制按钮 -->
-                    <div class="mb-4">
-                        <h6>控制操作</h6>
-                        <div class="d-grid gap-2">
-                            <button id="startBtn" class="btn btn-success">
-                                <i class="fas fa-play me-2"></i>开始抽样
-                            </button>
-                            <button id="pauseBtn" class="btn btn-warning" disabled>
-                                <i class="fas fa-pause me-2"></i>暂停
-                            </button>
-                            <button id="resetBtn" class="btn btn-danger">
-                                <i class="fas fa-redo me-2"></i>重置
-                            </button>
+                <!-- 控制按钮 -->
+                <div class="parameter-section">
+                    <div class="section-title">控制操作</div>
+                    <div class="d-grid gap-2">
+                        <button id="startBtn" class="btn btn-success">
+                            <i class="fas fa-play me-2"></i>开始抽样
+                        </button>
+                        <button id="pauseBtn" class="btn btn-warning" disabled>
+                            <i class="fas fa-pause me-2"></i>暂停
+                        </button>
+                        <button id="resetBtn" class="btn btn-danger">
+                            <i class="fas fa-redo me-2"></i>重置
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 实时统计 -->
+                <div class="parameter-section">
+                    <div class="section-title">实时统计</div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value text-primary" id="completedSamples">0</div>
+                            <div class="stat-label">已完成样本</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value text-success" id="currentMean">--</div>
+                            <div class="stat-label">当前样本均值</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value text-info" id="samplingMean">--</div>
+                            <div class="stat-label">抽样分布均值</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value text-warning" id="samplingStd">--</div>
+                            <div class="stat-label">抽样分布标准差</div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- 实时统计 -->
-                    <div class="mb-4">
-                        <h6>实时统计</h6>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <div class="text-center p-2 bg-light rounded">
-                                    <div class="fw-bold text-primary" id="completedSamples">0</div>
-                                    <small>已完成样本</small>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="text-center p-2 bg-light rounded">
-                                    <div class="fw-bold text-success" id="currentMean">--</div>
-                                    <small>当前样本均值</small>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="text-center p-2 bg-light rounded">
-                                    <div class="fw-bold text-info" id="samplingMean">--</div>
-                                    <small>抽样分布均值</small>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="text-center p-2 bg-light rounded">
-                                    <div class="fw-bold text-warning" id="samplingStd">--</div>
-                                    <small>抽样分布标准差</small>
-                                </div>
-                            </div>
-                        </div>
+                <!-- 理论说明 -->
+                <div class="theory-info">
+                    <div class="info-title">
+                        <i class="fas fa-info-circle me-2"></i>理论背景
                     </div>
-
-                    <!-- 理论说明 -->
-                    <div class="alert alert-info">
-                        <h6><i class="fas fa-info-circle me-2"></i>理论背景</h6>
-                        <p class="mb-0 small">
-                            中心极限定理：当样本量足够大时，样本均值的抽样分布趋向于正态分布，
-                            均值等于总体均值，标准差等于总体标准差除以√n。
-                        </p>
+                    <div class="info-content">
+                        中心极限定理：当样本量足够大时，样本均值的抽样分布趋向于正态分布，
+                        均值等于总体均值，标准差等于总体标准差除以√n。
                     </div>
+                </div>
+                
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <strong>状态:</strong> <span id="simulationStatus">就绪</span>
+                    </small>
                 </div>
             </div>
         </div>
 
         <!-- 模拟器主体 -->
-        <div class="col-lg-9">
+        <div class="col-md-9">
             <div class="row">
                 <!-- 总体分布 -->
-                <div class="col-lg-6">
+                <div class="col-lg-4">
                     <div class="card">
                         <div class="card-header">
-                            <h5 class="mb-0">总体分布</h5>
+                            <h6 class="mb-0">
+                                <i class="fas fa-chart-area me-2"></i>
+                                总体分布
+                            </h6>
                         </div>
                         <div class="card-body p-0">
-                            <canvas id="populationCanvas" width="400" height="300" class="w-100"></canvas>
+                            <canvas id="populationCanvas" width="400" height="300"></canvas>
                         </div>
                     </div>
                 </div>
 
                 <!-- 当前样本 -->
-                <div class="col-lg-6">
+                <div class="col-lg-4">
                     <div class="card">
                         <div class="card-header">
-                            <h5 class="mb-0">当前样本 <span id="currentSampleInfo">(n=30)</span></h5>
+                            <h6 class="mb-0">
+                                <i class="fas fa-chart-bar me-2"></i>
+                                当前样本 <span id="currentSampleInfo">(n=30)</span>
+                            </h6>
                         </div>
                         <div class="card-body p-0">
-                            <canvas id="sampleCanvas" width="400" height="300" class="w-100"></canvas>
+                            <canvas id="sampleCanvas" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <!-- 理论对比 -->
+                <div class="col-lg-4">
+                    <div class="results-panel">
+                        <h5 class="mb-3">
+                            <i class="fas fa-calculator me-2"></i>
+                            理论 vs 实际对比
+                        </h5>
+                        <div class="comparison-stats">
+                            <div class="comparison-stat-card">
+                                <div class="comparison-stat-value text-primary" id="theoreticalMean">--</div>
+                                <div class="comparison-stat-label">理论均值</div>
+                                <div class="comparison-stat-formula">μ</div>
+                            </div>
+                            <div class="comparison-stat-card">
+                                <div class="comparison-stat-value text-success" id="actualMean">--</div>
+                                <div class="comparison-stat-label">实际均值</div>
+                                <div class="comparison-stat-formula">x̄</div>
+                            </div>
+                            <div class="comparison-stat-card">
+                                <div class="comparison-stat-value text-info" id="theoreticalSE">--</div>
+                                <div class="comparison-stat-label">理论标准误</div>
+                                <div class="comparison-stat-formula">σ/√n</div>
+                            </div>
+                            <div class="comparison-stat-card">
+                                <div class="comparison-stat-value text-warning" id="actualSE">--</div>
+                                <div class="comparison-stat-label">实际标准误</div>
+                                <div class="comparison-stat-formula">s/√n</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -175,7 +474,10 @@
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header">
-                            <h5 class="mb-0">样本均值的抽样分布</h5>
+                            <h6 class="mb-0">
+                                <i class="fas fa-chart-line me-2"></i>
+                                样本均值的抽样分布
+                            </h6>
                         </div>
                         <div class="card-body">
                             <canvas id="samplingDistributionChart" width="800" height="400"></canvas>
@@ -184,53 +486,19 @@
                 </div>
             </div>
 
-            <!-- 理论对比 -->
-            <div class="row mt-4">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0">理论 vs 实际对比</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <div class="text-center">
-                                        <h4 class="text-primary" id="theoreticalMean">--</h4>
-                                        <p class="mb-0">理论均值</p>
-                                        <small class="text-muted">μ</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="text-center">
-                                        <h4 class="text-success" id="actualMean">--</h4>
-                                        <p class="mb-0">实际均值</p>
-                                        <small class="text-muted">x̄</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="text-center">
-                                        <h4 class="text-info" id="theoreticalSE">--</h4>
-                                        <p class="mb-0">理论标准误</p>
-                                        <small class="text-muted">σ/√n</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="text-center">
-                                        <h4 class="text-warning" id="actualSE">--</h4>
-                                        <p class="mb-0">实际标准误</p>
-                                        <small class="text-muted">s/√n</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'vendor/chartjs/chart.js' %}"></script>
 <script src="{% static 'js/sampling_distribution.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化模拟器状态
+    document.getElementById('simulationStatus').textContent = '已加载';
+});
+</script>
 {% endblock %}

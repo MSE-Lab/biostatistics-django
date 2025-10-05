@@ -129,7 +129,7 @@
     }
     
     .card-header {
-        background: #09529b;
+        background: #495057;
         color: white;
         font-weight: 600;
         border-radius: 10px 10px 0 0 !important;
@@ -311,6 +311,14 @@
                     正态分布 - 概率密度函数
                 </h5>
                 <canvas id="distributionChart"></canvas>
+                
+                <!-- 分布信息 -->
+                <div class="distribution-info mt-3" id="distributionInfo">
+                    <div class="info-title">分布信息</div>
+                    <div class="info-content" id="distributionDetails">
+                        <!-- 分布详细信息将在这里显示 -->
+                    </div>
+                </div>
             </div>
 
             <!-- 随机样本可视化 -->
