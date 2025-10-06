@@ -107,21 +107,51 @@
             {% if item.question.question_type == 'single_choice' or item.question.question_type == 'multiple_choice' %}
             <div class="options-display">
                 {% for option_key, option_value in item.question.options.items %}
-                <div class="option-item {% if item.question.question_type == 'single_choice' and item.student_answer == option_key %}selected{% elif item.question.question_type == 'multiple_choice' and option_key in item.student_answer %}selected{% endif %}">
-                    <span class="option-label">{{ option_key }}.</span>
-                    <span class="option-text">{{ option_value }}</span>
-                    {% if item.question.question_type == 'single_choice' and item.student_answer == option_key %}
-                        <span class="selection-mark">✓ 您的选择</span>
-                    {% elif item.question.question_type == 'multiple_choice' and option_key in item.student_answer %}
-                        <span class="selection-mark">✓ 您的选择</span>
-                    {% endif %}
-                </div>
+                {% if item.question.question_type == 'single_choice' %}
+                    <div class="option-item {% if item.student_answer == option_key %}selected{% endif %}">
+                        <span class="option-label">{{ option_key }}.</span>
+                        <span class="option-text">{{ option_value }}</span>
+                        {% if item.student_answer == option_key %}
+                            <span class="selection-mark">✓ 您的选择</span>
+                        {% endif %}
+                    </div>
+                {% elif item.question.question_type == 'multiple_choice' %}
+                    {% with student_choices=item.student_answer|clean_multiple_choice %}
+                    <div class="option-item {% if option_key in student_choices %}selected{% endif %}">
+                        <span class="option-label">{{ option_key }}.</span>
+                        <span class="option-text">{{ option_value }}</span>
+                        {% if option_key in student_choices %}
+                            <span class="selection-mark">✓ 您的选择</span>
+                        {% endif %}
+                    </div>
+                    {% endwith %}
+                {% endif %}
                 {% endfor %}
             </div>
             {% endif %}
             
-            <!-- 填空题和简答题答案显示 -->
-            {% if item.question.question_type == 'fill_blank' or item.question.question_type == 'short_answer' %}
+            <!-- 判断题答案显示 -->
+            {% if item.question.question_type == 'true_false' %}
+            <div class="true-false-answer-display">
+                <div class="answer-label">您的答案：</div>
+                <div class="answer-content">
+                    {% if item.student_answer %}
+                        {% if item.student_answer == 'true' %}
+                            <span class="true-answer">✓ 正确</span>
+                        {% elif item.student_answer == 'false' %}
+                            <span class="false-answer">✗ 错误</span>
+                        {% else %}
+                            <span class="unknown-answer">{{ item.student_answer }}</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="no-answer">未作答</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- 填空题、简答题和论述题答案显示 -->
+            {% if item.question.question_type == 'fill_blank' or item.question.question_type == 'short_answer' or item.question.question_type == 'essay' %}
             <div class="text-answer-display">
                 <div class="answer-label">您的答案：</div>
                 <div class="answer-content">
@@ -449,7 +479,8 @@
     margin-left: 10px;
 }
 
-.text-answer-display {
+.text-answer-display,
+.true-false-answer-display {
     margin-bottom: 20px;
 }
 
@@ -457,6 +488,23 @@
     color: #7f8c8d;
     font-weight: 500;
     margin-bottom: 10px;
+}
+
+.true-answer {
+    color: #27ae60;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.false-answer {
+    color: #e74c3c;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.unknown-answer {
+    color: #f39c12;
+    font-weight: 600;
 }
 
 .answer-content {

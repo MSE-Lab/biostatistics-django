@@ -94,3 +94,39 @@ def to_chr(value):
         return builtins.chr(int(value))
     except (ValueError, TypeError):
         return value
+
+@register.filter
+def split(value, delimiter=","):
+    """
+    字符串分割过滤器
+    用法：{{ string|split:"," }}
+    """
+    if value is None:
+        return []
+    return str(value).split(delimiter)
+
+@register.filter
+def clean_multiple_choice(value):
+    """
+    清理多选题答案，移除空值和None
+    用法：{{ answer|clean_multiple_choice }}
+    """
+    if not value:
+        return []
+    
+    choices = str(value).split(',')
+    # 清理每个选项，移除空格和无效值
+    cleaned_choices = []
+    for choice in choices:
+        choice = choice.strip()
+        # 移除各种无效值
+        if (choice and 
+            choice != 'None' and 
+            choice != 'null' and 
+            choice != '' and 
+            choice != '.' and
+            choice != '. None' and
+            not choice.startswith('. ')):
+            cleaned_choices.append(choice)
+    
+    return cleaned_choices

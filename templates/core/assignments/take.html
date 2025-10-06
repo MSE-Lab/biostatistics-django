@@ -64,6 +64,10 @@
                 
                 <div class="question-answer">
                     {% if question.question_type == 'single_choice' %}
+                        <div class="answer-instruction">
+                            <i class="fas fa-info-circle me-2"></i>
+                            请选择一个正确答案：
+                        </div>
                         {% for option_key, option_value in question.options.items %}
                         <div class="option-item">
                             <input type="radio" 
@@ -79,8 +83,12 @@
                         {% endfor %}
                     
                     {% elif question.question_type == 'multiple_choice' %}
-                        {% for option_key, option_value in question.options.items %}
+                        <div class="answer-instruction">
+                            <i class="fas fa-info-circle me-2"></i>
+                            请选择所有正确答案（可多选）：
+                        </div>
                         {% with saved_answer=saved_answers|get_item:question.id %}
+                        {% for option_key, option_value in question.options.items %}
                         <div class="option-item">
                             <input type="checkbox" 
                                    id="q{{ question.id }}_{{ option_key }}" 
@@ -92,8 +100,8 @@
                                 <span class="option-text">{{ option_value }}</span>
                             </label>
                         </div>
-                        {% endwith %}
                         {% endfor %}
+                        {% endwith %}
                     
                     {% elif question.question_type == 'fill_blank' %}
                         <div class="fill-blank-item">
@@ -107,6 +115,48 @@
                             <textarea name="answer_{{ question.id }}" 
                                       placeholder="请输入您的答案" 
                                       rows="6">{% if saved_answers %}{{ saved_answers|get_item:question.id }}{% endif %}</textarea>
+                        </div>
+                    
+                    {% elif question.question_type == 'essay' %}
+                        <div class="essay-item">
+                            <textarea name="answer_{{ question.id }}" 
+                                      placeholder="请详细阐述您的观点和分析" 
+                                      rows="8">{% if saved_answers %}{{ saved_answers|get_item:question.id }}{% endif %}</textarea>
+                        </div>
+                    
+                    {% elif question.question_type == 'true_false' %}
+                        <div class="answer-instruction">
+                            <i class="fas fa-info-circle me-2"></i>
+                            请判断下列说法是否正确：
+                        </div>
+                        <div class="true-false-item">
+                            <div class="option-item">
+                                <input type="radio" 
+                                       id="q{{ question.id }}_true" 
+                                       name="answer_{{ question.id }}" 
+                                       value="true"
+                                       {% if saved_answers and saved_answers|get_item:question.id == 'true' %}checked{% endif %}>
+                                <label for="q{{ question.id }}_true">
+                                    <span class="option-label">✓</span>
+                                    <span class="option-text">正确</span>
+                                </label>
+                            </div>
+                            <div class="option-item">
+                                <input type="radio" 
+                                       id="q{{ question.id }}_false" 
+                                       name="answer_{{ question.id }}" 
+                                       value="false"
+                                       {% if saved_answers and saved_answers|get_item:question.id == 'false' %}checked{% endif %}>
+                                <label for="q{{ question.id }}_false">
+                                    <span class="option-label">✗</span>
+                                    <span class="option-text">错误</span>
+                                </label>
+                            </div>
+                        </div>
+                    
+                    {% else %}
+                        <div class="unknown-question-type">
+                            <p class="text-muted">不支持的题型：{{ question.question_type }}</p>
                         </div>
                     {% endif %}
                 </div>
@@ -325,7 +375,8 @@
 }
 
 .fill-blank-item textarea,
-.short-answer-item textarea {
+.short-answer-item textarea,
+.essay-item textarea {
     width: 100%;
     padding: 15px;
     border: 2px solid #ecf0f1;
@@ -337,9 +388,66 @@
 }
 
 .fill-blank-item textarea:focus,
-.short-answer-item textarea:focus {
+.short-answer-item textarea:focus,
+.essay-item textarea:focus {
     outline: none;
     border-color: #3498db;
+}
+
+.true-false-item {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+}
+
+.true-false-item .option-item {
+    flex: 1;
+    max-width: 200px;
+    text-align: center;
+    border: 2px solid #ecf0f1;
+    border-radius: 8px;
+    padding: 20px;
+    transition: all 0.2s ease;
+}
+
+.true-false-item .option-item:hover {
+    border-color: #3498db;
+    background: #f8f9fa;
+}
+
+.true-false-item .option-item input[type="radio"]:checked + label {
+    color: #3498db;
+    font-weight: 600;
+}
+
+.true-false-item .option-label {
+    font-size: 1.5rem;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.true-false-item .option-text {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.unknown-question-type {
+    padding: 20px;
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.answer-instruction {
+    background: #e8f4fd;
+    border-left: 4px solid #3498db;
+    padding: 12px 15px;
+    margin-bottom: 20px;
+    border-radius: 0 6px 6px 0;
+    color: #2c3e50;
+    font-weight: 500;
+    font-size: 0.95rem;
 }
 
 .form-actions {

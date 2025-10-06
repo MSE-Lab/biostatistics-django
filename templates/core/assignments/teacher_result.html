@@ -20,7 +20,22 @@
                         {% endif %}
                     </div>
                 </div>
-
+                
+                <!-- 操作按钮组 -->
+                <div class="page-actions">
+                    <a href="{% url 'core:assignment_export_page' assignment.id %}" class="btn btn-success me-2">
+                        <i class="fas fa-download me-2"></i>
+                        导出存档
+                    </a>
+                    <a href="{% url 'core:assignment_grade' assignment.id %}" class="btn btn-primary me-2">
+                        <i class="fas fa-edit me-2"></i>
+                        批改作业
+                    </a>
+                    <a href="{% url 'core:assignment_index' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        返回列表
+                    </a>
+                </div>
             </div>
             {% if assignment.description %}
                 <div class="assignment-description">

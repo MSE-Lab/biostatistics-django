@@ -2,11 +2,12 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.db import models
 from datetime import datetime
+import json
 from .models import User, TeacherProfile, StudentProfile, Class, TeachingClass, VideoResource, ForumCategory, ForumPost, ForumReply, ForumLike, PostReadStatus, Assignment, Question, StudentSubmission, QuestionScore
 from .forms import StudentRegistrationForm, LoginForm
 
@@ -1271,23 +1272,30 @@ def assignment_index(request):
 
 def assignment_teacher_index(request):
     """教师作业管理首页"""
-    # 获取该教师创建的所有作业
-    assignments = Assignment.objects.filter(created_by=request.user).exclude(status='archived').order_by('-created_at')
+    # 获取该教师创建的所有作业（包括已归档的）
+    all_assignments = Assignment.objects.filter(created_by=request.user).order_by('-created_at')
+    
+    # 分类作业
+    active_assignments = all_assignments.exclude(status='archived')
+    archived_assignments = all_assignments.filter(status='archived')
     
     # 统计信息
-    total_assignments = assignments.count()
-    published_assignments = assignments.filter(status='published').count()
+    total_assignments = all_assignments.count()
+    published_assignments = active_assignments.filter(status='published').count()
+    archived_count = archived_assignments.count()
     pending_grading = 0
     
-    for assignment in assignments.filter(status='published'):
+    for assignment in active_assignments.filter(status='published'):
         pending_grading += assignment.submission_count - assignment.graded_count
     
     context = {
         'title': '作业管理',
-        'assignments': assignments,
+        'assignments': active_assignments,
+        'archived_assignments': archived_assignments,
         'stats': {
             'total_assignments': total_assignments,
             'published_assignments': published_assignments,
+            'archived_count': archived_count,
             'pending_grading': pending_grading,
         }
     }
@@ -2112,3 +2120,232 @@ def assignment_grade_detail(request, assignment_id, submission_id):
 
 # 导入归档功能
 from .archive_view import assignment_archive
+
+# ==================== 作业导出存档功能 ====================
+
+@login_required
+def assignment_export_page(request, assignment_id):
+    """作业导出页面"""
+    if request.user.user_type != 'teacher':
+        messages.error(request, '只有教师可以导出作业')
+        return redirect('core:assignment_index')
+    
+    assignment = get_object_or_404(Assignment, id=assignment_id, created_by=request.user)
+    
+    # 获取导出统计信息
+    total_submissions = assignment.studentsubmission_set.filter(is_submitted=True).count()
+    graded_submissions = assignment.studentsubmission_set.filter(
+        is_submitted=True, is_graded=True
+    ).count()
+    
+    stats = {
+        'total_submissions': total_submissions,
+        'graded_submissions': graded_submissions,
+        'grading_progress': (graded_submissions / total_submissions * 100) if total_submissions > 0 else 0,
+        'can_export': graded_submissions > 0,
+    }
+    
+    # 获取已批改的提交记录
+    graded_submissions = assignment.studentsubmission_set.filter(
+        is_submitted=True, is_graded=True
+    ).select_related('student', 'graded_by').order_by('student__real_name')
+    
+    context = {
+        'title': f'导出存档 - {assignment.title}',
+        'assignment': assignment,
+        'stats': stats,
+        'graded_submissions': graded_submissions,
+    }
+    
+    return render(request, 'core/assignments/export.html', context)
+
+
+@login_required
+def assignment_export_excel(request, assignment_id):
+    """导出CSV格式（Excel兼容）"""
+    if request.user.user_type != 'teacher':
+        return JsonResponse({'error': '只有教师可以导出作业'}, status=403)
+    
+    assignment = get_object_or_404(Assignment, id=assignment_id, created_by=request.user)
+    
+    # 检查是否有已批改的提交
+    graded_count = assignment.studentsubmission_set.filter(
+        is_submitted=True, is_graded=True
+    ).count()
+    
+    if graded_count == 0:
+        return JsonResponse({'error': '该作业暂无已批改的提交记录，无法导出'}, status=400)
+    
+    # 简化的CSV导出
+    import csv
+    import io
+    
+    # 创建CSV内容
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # 写入标题信息
+    writer.writerow([f'作业：{assignment.title}'])
+    writer.writerow([f'教学班：{assignment.teaching_class.name}'])
+    writer.writerow([f'导出时间：{timezone.now().strftime("%Y-%m-%d %H:%M:%S")}'])
+    writer.writerow([])  # 空行
+    
+    # 写入表头
+    writer.writerow([
+        '序号', '学号', '姓名', '总分', '得分', '得分率(%)', 
+        '提交时间', '批改时间', '批改教师', '是否逾期', '教师评语'
+    ])
+    
+    # 写入数据
+    submissions = assignment.studentsubmission_set.filter(
+        is_submitted=True, is_graded=True
+    ).select_related('student', 'graded_by')
+    
+    for idx, submission in enumerate(submissions, 1):
+        try:
+            student_id = submission.student.studentprofile.student_id if hasattr(submission.student, 'studentprofile') else submission.student.username
+        except:
+            student_id = submission.student.username
+            
+        writer.writerow([
+            idx,
+            student_id,
+            submission.student.real_name,
+            assignment.total_score,
+            submission.score or 0,
+            submission.score_percentage or 0,
+            submission.submit_time.strftime('%Y-%m-%d %H:%M'),
+            submission.graded_at.strftime('%Y-%m-%d %H:%M') if submission.graded_at else '',
+            submission.graded_by.real_name if submission.graded_by else '',
+            '是' if submission.is_late else '否',
+            submission.teacher_comments or ''
+        ])
+    
+    # 创建HTTP响应
+    response = HttpResponse(
+        output.getvalue().encode('utf-8-sig'),  # 使用UTF-8 BOM确保Excel正确显示中文
+        content_type='text/csv'
+    )
+    filename = f"{assignment.title}_作业存档_{timezone.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
+
+@login_required
+def assignment_export_json(request, assignment_id):
+    """导出JSON格式"""
+    if request.user.user_type != 'teacher':
+        return JsonResponse({'error': '只有教师可以导出作业'}, status=403)
+    
+    assignment = get_object_or_404(Assignment, id=assignment_id, created_by=request.user)
+    
+    # 检查是否有已批改的提交
+    graded_count = assignment.studentsubmission_set.filter(
+        is_submitted=True, is_graded=True
+    ).count()
+    
+    if graded_count == 0:
+        return JsonResponse({'error': '该作业暂无已批改的提交记录，无法导出'}, status=400)
+    
+    # 简化的JSON导出
+    import json
+    
+    submissions = assignment.studentsubmission_set.filter(
+        is_submitted=True, is_graded=True
+    ).select_related('student', 'graded_by').prefetch_related('question_scores')
+    
+    data = {
+        'assignment': {
+            'id': assignment.id,
+            'title': assignment.title,
+            'description': assignment.description,
+            'teaching_class': assignment.teaching_class.name,
+            'chapter': assignment.chapter,
+            'total_score': assignment.total_score,
+            'publish_time': assignment.publish_time.isoformat(),
+            'due_time': assignment.due_time.isoformat(),
+            'created_by': assignment.created_by.real_name,
+            'export_time': timezone.now().isoformat(),
+        },
+        'questions': [],
+        'submissions': []
+    }
+    
+    # 导出题目
+    for question in assignment.questions.all().order_by('order'):
+        data['questions'].append({
+            'id': question.id,
+            'order': question.order,
+            'content': question.content,
+            'question_type': question.question_type,
+            'difficulty': question.difficulty,
+            'options': question.options,
+            'correct_answer': question.correct_answer,
+            'explanation': question.explanation,
+            'score': question.score,
+        })
+    
+    # 导出提交记录
+    for submission in submissions:
+        try:
+            student_id = submission.student.studentprofile.student_id if hasattr(submission.student, 'studentprofile') else submission.student.username
+        except:
+            student_id = submission.student.username
+            
+        submission_data = {
+            'student': {
+                'id': submission.student.id,
+                'student_id': student_id,
+                'real_name': submission.student.real_name,
+            },
+            'answers': submission.answers,
+            'score': submission.score,
+            'submit_time': submission.submit_time.isoformat(),
+            'is_late': submission.is_late,
+            'teacher_comments': submission.teacher_comments,
+            'graded_by': submission.graded_by.real_name if submission.graded_by else None,
+            'graded_at': submission.graded_at.isoformat() if submission.graded_at else None,
+            'question_scores': []
+        }
+        
+        # 导出题目得分
+        for question_score in submission.question_scores.all():
+            submission_data['question_scores'].append({
+                'question_id': question_score.question.id,
+                'score': question_score.score,
+                'teacher_comment': question_score.teacher_comment,
+            })
+        
+        data['submissions'].append(submission_data)
+    
+    # 创建HTTP响应
+    response = HttpResponse(
+        json.dumps(data, ensure_ascii=False, indent=2),
+        content_type='application/json'
+    )
+    filename = f"{assignment.title}_数据备份_{timezone.now().strftime('%Y%m%d_%H%M%S')}.json"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
+
+@login_required
+def assignment_export_status(request, assignment_id):
+    """获取作业导出状态（AJAX）"""
+    if request.user.user_type != 'teacher':
+        return JsonResponse({'error': '权限不足'}, status=403)
+    
+    assignment = get_object_or_404(Assignment, id=assignment_id, created_by=request.user)
+    
+    total_submissions = assignment.studentsubmission_set.filter(is_submitted=True).count()
+    graded_submissions = assignment.studentsubmission_set.filter(
+        is_submitted=True, is_graded=True
+    ).count()
+    
+    return JsonResponse({
+        'can_export': graded_submissions > 0,
+        'total_submissions': total_submissions,
+        'graded_submissions': graded_submissions,
+        'grading_progress': round((graded_submissions / total_submissions * 100) if total_submissions > 0 else 0, 1),
+    })

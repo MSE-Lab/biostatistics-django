@@ -103,9 +103,23 @@
                                     {% endif %}
                                 {% elif item.question.question_type == 'multiple_choice' %}
                                     {% if item.student_answer %}
-                                        {% for choice in item.student_answer %}
-                                            <span class="selected-option me-2">{{ choice|add:64|to_chr }}. {{ item.question.options|get_item:choice }}</span>
-                                        {% endfor %}
+                                        {% with choices=item.student_answer|clean_multiple_choice %}
+                                            {% for choice in choices %}
+                                                <span class="selected-option me-2">{{ choice }}. {{ item.question.options|get_item:choice|default:"未知选项" }}</span>
+                                            {% endfor %}
+                                        {% endwith %}
+                                    {% else %}
+                                        <span class="text-muted">未作答</span>
+                                    {% endif %}
+                                {% elif item.question.question_type == 'true_false' %}
+                                    {% if item.student_answer %}
+                                        {% if item.student_answer == 'true' %}
+                                            <span class="true-answer">✓ 正确</span>
+                                        {% elif item.student_answer == 'false' %}
+                                            <span class="false-answer">✗ 错误</span>
+                                        {% else %}
+                                            <span class="unknown-answer">{{ item.student_answer }}</span>
+                                        {% endif %}
                                     {% else %}
                                         <span class="text-muted">未作答</span>
                                     {% endif %}
@@ -405,6 +419,35 @@
     font-weight: 500;
     margin-right: 0.5rem;
     margin-bottom: 0.5rem;
+}
+
+.true-answer {
+    color: #27ae60;
+    font-weight: 600;
+    font-size: 1.1rem;
+    background: #d4edda;
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: inline-block;
+}
+
+.false-answer {
+    color: #e74c3c;
+    font-weight: 600;
+    font-size: 1.1rem;
+    background: #f8d7da;
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: inline-block;
+}
+
+.unknown-answer {
+    color: #f39c12;
+    font-weight: 600;
+    background: #fff3cd;
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: inline-block;
 }
 
 .text-answer {

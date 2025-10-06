@@ -35,4 +35,10 @@ urlpatterns = [
     path('assignments/<int:assignment_id>/grade/', views.assignment_grade, name='assignment_grade'),
     path('assignments/<int:assignment_id>/grade/<int:submission_id>/', views.assignment_grade_detail, name='assignment_grade_detail'),
     path('assignments/<int:assignment_id>/archive/', views.assignment_archive, name='assignment_archive'),
+    
+    # 作业导出相关URL
+    path('assignments/<int:assignment_id>/export/', views.assignment_export_page, name='assignment_export_page'),
+    path('assignments/<int:assignment_id>/export/excel/', views.assignment_export_excel, name='assignment_export_excel'),
+    path('assignments/<int:assignment_id>/export/json/', views.assignment_export_json, name='assignment_export_json'),
+    path('assignments/<int:assignment_id>/export/status/', views.assignment_export_status, name='assignment_export_status'),
 ]
