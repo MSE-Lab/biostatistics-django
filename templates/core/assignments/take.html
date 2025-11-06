@@ -125,34 +125,120 @@
                         </div>
                     
                     {% elif question.question_type == 'true_false' %}
-                        <div class="answer-instruction">
-                            <i class="fas fa-info-circle me-2"></i>
+                        <!-- 判断题 - 生产环境兼容版本 -->
+                        <div class="answer-instruction" style="background: #e8f4fd; border-left: 4px solid #3498db; padding: 12px 15px; margin-bottom: 20px; border-radius: 0 6px 6px 0; color: #2c3e50; font-weight: 500; font-size: 0.95rem;">
+                            <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
                             请判断下列说法是否正确：
                         </div>
-                        <div class="true-false-item">
-                            <div class="option-item">
+                        
+                        <div style="display: flex; gap: 25px; justify-content: center; margin: 25px 0; flex-wrap: wrap;">
+                            <!-- 正确选项 -->
+                            <div class="true-option-{{ question.id }}" style="
+                                flex: 1; 
+                                max-width: 220px; 
+                                min-width: 180px;
+                                text-align: center; 
+                                border: 3px solid #27ae60; 
+                                border-radius: 15px; 
+                                padding: 25px 20px; 
+                                background: white; 
+                                cursor: pointer; 
+                                transition: all 0.3s ease;
+                                box-shadow: 0 2px 10px rgba(39, 174, 96, 0.1);
+                            " 
+                            onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 6px 20px rgba(39, 174, 96, 0.2)';"
+                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 10px rgba(39, 174, 96, 0.1)';"
+                            onclick="document.getElementById('q{{ question.id }}_true').checked = true; updateTrueFalseSelection{{ question.id }}('true'); updateProgress();">
+                                
                                 <input type="radio" 
                                        id="q{{ question.id }}_true" 
                                        name="answer_{{ question.id }}" 
                                        value="true"
+                                       style="position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; cursor: pointer;"
+                                       onchange="updateTrueFalseSelection{{ question.id }}('true')"
                                        {% if saved_answers and saved_answers|get_item:question.id == 'true' %}checked{% endif %}>
-                                <label for="q{{ question.id }}_true">
-                                    <span class="option-label">✓</span>
-                                    <span class="option-text">正确</span>
-                                </label>
+                                
+                                <div style="font-size: 2.5rem; margin-bottom: 12px; color: #27ae60; pointer-events: none;">✓</div>
+                                <div style="font-size: 1.3rem; font-weight: 700; color: #27ae60; pointer-events: none;">正确</div>
                             </div>
-                            <div class="option-item">
+                            
+                            <!-- 错误选项 -->
+                            <div class="false-option-{{ question.id }}" style="
+                                flex: 1; 
+                                max-width: 220px; 
+                                min-width: 180px;
+                                text-align: center; 
+                                border: 3px solid #e74c3c; 
+                                border-radius: 15px; 
+                                padding: 25px 20px; 
+                                background: white; 
+                                cursor: pointer; 
+                                transition: all 0.3s ease;
+                                box-shadow: 0 2px 10px rgba(231, 76, 60, 0.1);
+                            "
+                            onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 6px 20px rgba(231, 76, 60, 0.2)';"
+                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 10px rgba(231, 76, 60, 0.1)';"
+                            onclick="document.getElementById('q{{ question.id }}_false').checked = true; updateTrueFalseSelection{{ question.id }}('false'); updateProgress();">
+                                
                                 <input type="radio" 
                                        id="q{{ question.id }}_false" 
                                        name="answer_{{ question.id }}" 
                                        value="false"
+                                       style="position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; cursor: pointer;"
+                                       onchange="updateTrueFalseSelection{{ question.id }}('false')"
                                        {% if saved_answers and saved_answers|get_item:question.id == 'false' %}checked{% endif %}>
-                                <label for="q{{ question.id }}_false">
-                                    <span class="option-label">✗</span>
-                                    <span class="option-text">错误</span>
-                                </label>
+                                
+                                <div style="font-size: 2.5rem; margin-bottom: 12px; color: #e74c3c; pointer-events: none;">✗</div>
+                                <div style="font-size: 1.3rem; font-weight: 700; color: #e74c3c; pointer-events: none;">错误</div>
                             </div>
                         </div>
+                        
+                        <script>
+                        function updateTrueFalseSelection{{ question.id }}(value) {
+                            const trueOption = document.querySelector('.true-option-{{ question.id }}');
+                            const falseOption = document.querySelector('.false-option-{{ question.id }}');
+                            
+                            if (value === 'true') {
+                                if (trueOption) {
+                                    trueOption.style.borderColor = '#219a52';
+                                    trueOption.style.backgroundColor = '#f8fff9';
+                                    trueOption.style.transform = 'translateY(-3px)';
+                                    trueOption.style.boxShadow = '0 6px 20px rgba(39, 174, 96, 0.3)';
+                                }
+                                if (falseOption) {
+                                    falseOption.style.borderColor = '#e74c3c';
+                                    falseOption.style.backgroundColor = 'white';
+                                    falseOption.style.transform = 'translateY(0)';
+                                    falseOption.style.boxShadow = '0 2px 10px rgba(231, 76, 60, 0.1)';
+                                }
+                            } else if (value === 'false') {
+                                if (falseOption) {
+                                    falseOption.style.borderColor = '#c0392b';
+                                    falseOption.style.backgroundColor = '#fff8f8';
+                                    falseOption.style.transform = 'translateY(-3px)';
+                                    falseOption.style.boxShadow = '0 6px 20px rgba(231, 76, 60, 0.3)';
+                                }
+                                if (trueOption) {
+                                    trueOption.style.borderColor = '#27ae60';
+                                    trueOption.style.backgroundColor = 'white';
+                                    trueOption.style.transform = 'translateY(0)';
+                                    trueOption.style.boxShadow = '0 2px 10px rgba(39, 174, 96, 0.1)';
+                                }
+                            }
+                        }
+                        
+                        // 页面加载时初始化选中状态
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const trueRadio = document.getElementById('q{{ question.id }}_true');
+                            const falseRadio = document.getElementById('q{{ question.id }}_false');
+                            
+                            if (trueRadio && trueRadio.checked) {
+                                updateTrueFalseSelection{{ question.id }}('true');
+                            } else if (falseRadio && falseRadio.checked) {
+                                updateTrueFalseSelection{{ question.id }}('false');
+                            }
+                        });
+                        </script>
                     
                     {% else %}
                         <div class="unknown-question-type">
@@ -351,15 +437,21 @@
 
 .option-item input[type="radio"],
 .option-item input[type="checkbox"] {
-    margin-right: 12px;
-    transform: scale(1.2);
+    margin-right: 12px !important;
+    transform: scale(1.3) !important;
+    cursor: pointer !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
 }
 
 .option-item label {
-    display: flex;
-    align-items: flex-start;
-    cursor: pointer;
-    font-size: 1rem;
+    display: flex !important;
+    align-items: flex-start !important;
+    cursor: pointer !important;
+    font-size: 1rem !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 .option-label {
@@ -395,40 +487,79 @@
 }
 
 .true-false-item {
-    display: flex;
-    gap: 20px;
-    justify-content: center;
+    display: flex !important;
+    gap: 20px !important;
+    justify-content: center !important;
+    margin: 20px 0 !important;
 }
 
 .true-false-item .option-item {
-    flex: 1;
-    max-width: 200px;
-    text-align: center;
-    border: 2px solid #ecf0f1;
-    border-radius: 8px;
-    padding: 20px;
-    transition: all 0.2s ease;
+    flex: 1 !important;
+    max-width: 200px !important;
+    text-align: center !important;
+    border: 3px solid #ecf0f1 !important;
+    border-radius: 12px !important;
+    padding: 25px 20px !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer !important;
+    background: white !important;
+    position: relative !important;
 }
 
 .true-false-item .option-item:hover {
-    border-color: #3498db;
-    background: #f8f9fa;
+    border-color: #3498db !important;
+    background: #f8f9fa !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.2) !important;
+}
+
+.true-false-item .option-item input[type="radio"] {
+    position: absolute !important;
+    opacity: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    cursor: pointer !important;
+    top: 0 !important;
+    left: 0 !important;
 }
 
 .true-false-item .option-item input[type="radio"]:checked + label {
-    color: #3498db;
-    font-weight: 600;
+    color: #3498db !important;
+    font-weight: 700 !important;
+}
+
+.true-false-item .option-item input[type="radio"]:checked ~ * {
+    color: #3498db !important;
+}
+
+.true-false-item .option-item label {
+    cursor: pointer !important;
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 .true-false-item .option-label {
-    font-size: 1.5rem;
-    display: block;
-    margin-bottom: 8px;
+    font-size: 2rem !important;
+    display: block !important;
+    margin-bottom: 10px !important;
+    color: #7f8c8d !important;
+    transition: color 0.2s ease !important;
 }
 
 .true-false-item .option-text {
-    font-size: 1.1rem;
-    font-weight: 500;
+    font-size: 1.2rem !important;
+    font-weight: 600 !important;
+    color: #2c3e50 !important;
+    transition: color 0.2s ease !important;
+}
+
+.true-false-item .option-item input[type="radio"]:checked + label .option-label,
+.true-false-item .option-item input[type="radio"]:checked + label .option-text {
+    color: #3498db !important;
 }
 
 .unknown-question-type {

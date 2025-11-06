@@ -100,20 +100,84 @@ class TeacherProfileAdmin(admin.ModelAdmin):
 @admin.register(StudentProfile)
 class StudentProfileAdmin(admin.ModelAdmin):
     """学生信息管理"""
-    list_display = ('user', 'get_real_name', 'student_id', 'gender', 'student_class', 'teaching_class', 'created_at')
-    list_filter = ('gender', 'student_class', 'teaching_class', 'created_at')
+    list_display = ('get_real_name', 'student_id', 'get_username', 'gender', 'grade', 'student_class', 'teaching_class', 'get_teaching_status')
+    list_filter = ('gender', 'grade', 'student_class', 'teaching_class', 'teaching_class__teaching_status', 'created_at')
     search_fields = ('user__real_name', 'user__username', 'student_id')
+    list_editable = ('teaching_class',)  # 允许在列表页直接编辑教学班
+    list_per_page = 50
+    
+    fieldsets = (
+        ('学生基本信息', {
+            'fields': ('user', 'student_id', 'gender', 'grade')
+        }),
+        ('班级信息', {
+            'fields': ('student_class', 'teaching_class'),
+            'description': '专业班级是学生的专业归属，教学班是具体的上课班级'
+        }),
+        ('创建信息', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('created_at',)
     
     def get_real_name(self, obj):
         return obj.user.real_name
     get_real_name.short_description = '姓名'
+    get_real_name.admin_order_field = 'user__real_name'
+    
+    def get_username(self, obj):
+        return obj.user.username
+    get_username.short_description = '用户名'
+    get_username.admin_order_field = 'user__username'
+    
+    def get_teaching_status(self, obj):
+        """显示教学班状态"""
+        status_colors = {
+            'open': '#34c759',      # 绿色 - 开课
+            'in_progress': '#007aff', # 蓝色 - 进行中
+            'finished': '#86868b'    # 灰色 - 结课
+        }
+        color = status_colors.get(obj.teaching_class.teaching_status, '#86868b')
+        return format_html(
+            '<span style="color: {}; font-weight: 500;">● {}</span>',
+            color,
+            obj.teaching_class.get_teaching_status_display()
+        )
+    get_teaching_status.short_description = '教学班状态'
+    get_teaching_status.admin_order_field = 'teaching_class__teaching_status'
     
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "user":
             kwargs["queryset"] = User.objects.filter(user_type='student')
         elif db_field.name == "teaching_class":
-            kwargs["queryset"] = TeachingClass.objects.filter(teaching_status='open')
+            # 显示所有教学班，不仅仅是开放的
+            kwargs["queryset"] = TeachingClass.objects.all().order_by('-created_at')
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+    
+    def get_queryset(self, request):
+        """优化查询性能"""
+        return super().get_queryset(request).select_related(
+            'user', 'student_class', 'teaching_class'
+        )
+    
+    # 批量操作
+    actions = ['batch_change_teaching_class']
+    
+    def batch_change_teaching_class(self, request, queryset):
+        """批量修改教学班"""
+        from django.http import HttpResponseRedirect
+        from django.urls import reverse
+        from django.contrib import messages
+        
+        selected_ids = list(queryset.values_list('id', flat=True))
+        request.session['selected_student_ids'] = selected_ids
+        
+        messages.info(request, f'已选择 {len(selected_ids)} 名学生，请在下一页选择目标教学班')
+        return HttpResponseRedirect(reverse('admin:batch_change_teaching_class'))
+    
+    batch_change_teaching_class.short_description = "批量修改教学班"
 
 @admin.register(VideoResource)
 class VideoResourceAdmin(admin.ModelAdmin):
